@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StatusConsulta {
+  agendada
+  cancelada
+}
+
+model Consulta {
+  id               String         @id @default(uuid())
+  pacienteNome     String         @map("paciente_nome")
+  pacienteCpf      String         @map("paciente_cpf")
+  pacienteTelefone String         @map("paciente_telefone")
+  profissional     String
+  especialidade    String
+  inicio           DateTime       @db.Timestamptz(3)
+  status           StatusConsulta @default(agendada)
+  criadoEm         DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm     DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  @@index([inicio])
+  @@map("consultas")
+}
+
+/// Outbox: o evento é gravado na mesma transação da consulta e publicado depois pelo publicador.
+/// Um reenvio de demonstração cria outra linha com o mesmo id_evento (duplicado = true).
+model EventoSaida {
+  id          String    @id @default(uuid())
+  idEvento    String    @map("id_evento")
+  tipo        String
+  envelope    Json
+  duplicado   Boolean   @default(false)
+  criadoEm    DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  publicadoEm DateTime? @map("publicado_em") @db.Timestamptz(3)
+  tentativas  Int       @default(0)
+  ultimoErro  String?   @map("ultimo_erro")
+
+  @@index([publicadoEm, criadoEm])
+  @@index([idEvento])
+  @@map("outbox")
+}
