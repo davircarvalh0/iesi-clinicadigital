@@ -1,0 +1,99 @@
+# Sobe tudo com: docker compose up --build
+services:
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672" # painel: http://localhost:15672 (clinica/clinica)
+    volumes:
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitmq-dados:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Um banco por serviço: nenhum serviço lê o banco de outro.
+  db-agendamento:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: agendamento
+      POSTGRES_PASSWORD: agendamento
+      POSTGRES_DB: agendamento
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-agendamento-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agendamento"]
+      interval: 3s
+      retries: 20
+
+  db-notificacao:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: notificacao
+      POSTGRES_PASSWORD: notificacao
+      POSTGRES_DB: notificacao
+    ports:
+      - "5434:5432"
+    volumes:
+      - db-notificacao-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notificacao"]
+      interval: 3s
+      retries: 20
+
+  agendamento:
+    build:
+      context: .
+      dockerfile: services/agendamento/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORTA: 3001
+      DATABASE_URL: postgresql://agendamento:agendamento@db-agendamento:5432/agendamento
+      RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
+    ports:
+      - "3001:3001"
+    depends_on:
+      db-agendamento: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  notificacao:
+    build:
+      context: .
+      dockerfile: services/notificacao/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORTA: 3002
+      DATABASE_URL: postgresql://notificacao:notificacao@db-notificacao:5432/notificacao
+      RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
+      LEMBRETE_ANTECEDENCIA_MINUTOS: ${LEMBRETE_ANTECEDENCIA_MINUTOS:-1440}
+      CANAL_ENVIO: ${CANAL_ENVIO:-log}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_TEMPLATE: ${WHATSAPP_TEMPLATE:-hello_world}
+      WHATSAPP_TEMPLATE_LANG: ${WHATSAPP_TEMPLATE_LANG:-en_US}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v21.0}
+    ports:
+      - "3002:3002"
+    depends_on:
+      db-notificacao: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  recepcao:
+    build:
+      context: .
+      dockerfile: apps/recepcao/Dockerfile
+    ports:
+      - "8080:80" # tela: http://localhost:8080
+    depends_on:
+      - agendamento
+      - notificacao
+
+volumes:
+  rabbitmq-dados:
+  db-agendamento-dados:
+  db-notificacao-dados:

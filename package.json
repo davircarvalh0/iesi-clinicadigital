@@ -1,0 +1,26 @@
+{
+  "name": "iesi-clinicadigital",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run build -w @clinica/eventos && npm run prisma:generate --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:agendamento": "npm run dev -w @clinica/agendamento",
+    "dev:notificacao": "npm run dev -w @clinica/notificacao",
+    "dev:recepcao": "npm run dev -w @clinica/recepcao",
+    "infra": "docker compose up -d rabbitmq db-agendamento db-notificacao",
+    "demo:popular": "node scripts/popular-demo.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "@types/node": "^24.19.2"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.0"
+  }
+}

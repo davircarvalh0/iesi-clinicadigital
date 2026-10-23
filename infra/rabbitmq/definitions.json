@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "name": "clinica",
+      "password_hash": "VaZTHWPAMVf696dgwBWbRKwJnc+XAaJuqHfirAM5m7tNm2Y4",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [{ "name": "/" }],
+  "permissions": [
+    { "user": "clinica", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*" }
+  ],
+  "exchanges": [
+    { "name": "clinica.eventos", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
+    { "name": "clinica.eventos.erros", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "internal": false, "arguments": {} }
+  ],
+  "queues": [
+    {
+      "name": "notificacao.consultas",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-dead-letter-exchange": "clinica.eventos.erros" }
+    },
+    { "name": "notificacao.consultas.erros", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} }
+  ],
+  "bindings": [
+    { "source": "clinica.eventos", "vhost": "/", "destination": "notificacao.consultas", "destination_type": "queue", "routing_key": "consulta.*", "arguments": {} },
+    { "source": "clinica.eventos.erros", "vhost": "/", "destination": "notificacao.consultas.erros", "destination_type": "queue", "routing_key": "", "arguments": {} }
+  ]
+}
