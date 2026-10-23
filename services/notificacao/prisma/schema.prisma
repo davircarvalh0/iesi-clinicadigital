@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StatusLembrete {
+  programado
+  enviado
+  falhou
+  cancelado
+}
+
+/// Cópia local dos dados de contato necessários ao envio (vindos do evento, sem conteúdo clínico).
+model Lembrete {
+  id             String         @id @default(uuid())
+  idConsulta     String         @unique @map("id_consulta")
+  pacienteNome   String         @map("paciente_nome")
+  telefone       String
+  profissional   String
+  especialidade  String
+  inicioConsulta DateTime       @map("inicio_consulta") @db.Timestamptz(3)
+  enviarEm       DateTime       @map("enviar_em") @db.Timestamptz(3)
+  status         StatusLembrete @default(programado)
+  tentativas     Int            @default(0)
+  motivoFalha    String?        @map("motivo_falha")
+  enviadoEm      DateTime?      @map("enviado_em") @db.Timestamptz(3)
+  criadoEm       DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  @@index([status, enviarEm])
+  @@map("lembretes")
+}
+
+/// Idempotência do consumidor: cada id_evento é processado uma única vez.
+model EventoProcessado {
+  idEvento     String   @id @map("id_evento")
+  tipo         String
+  processadoEm DateTime @default(now()) @map("processado_em") @db.Timestamptz(3)
+
+  @@map("eventos_processados")
+}
+
+/// O que o serviço fez, em ordem: alimenta o painel "Eventos em tempo real" da recepção.
+model Atividade {
+  id         String   @id @default(uuid())
+  acao       String
+  descricao  String
+  idEvento   String?  @map("id_evento")
+  idConsulta String?  @map("id_consulta")
+  ocorridoEm DateTime @default(now()) @map("ocorrido_em") @db.Timestamptz(3)
+
+  @@index([ocorridoEm])
+  @@map("atividades")
+}
