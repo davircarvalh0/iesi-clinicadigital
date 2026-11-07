@@ -4,16 +4,44 @@
       "name": "clinica",
       "password_hash": "VaZTHWPAMVf696dgwBWbRKwJnc+XAaJuqHfirAM5m7tNm2Y4",
       "hashing_algorithm": "rabbit_password_hashing_sha256",
-      "tags": ["administrator"]
+      "tags": [
+        "administrator"
+      ]
     }
   ],
-  "vhosts": [{ "name": "/" }],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
   "permissions": [
-    { "user": "clinica", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*" }
+    {
+      "user": "clinica",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
   ],
   "exchanges": [
-    { "name": "clinica.eventos", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {} },
-    { "name": "clinica.eventos.erros", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "internal": false, "arguments": {} }
+    {
+      "name": "clinica.eventos",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "clinica.eventos.erros",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
   ],
   "queues": [
     {
@@ -21,12 +49,74 @@
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": { "x-dead-letter-exchange": "clinica.eventos.erros" }
+      "arguments": {
+        "x-dead-letter-exchange": "clinica.eventos.erros"
+      }
     },
-    { "name": "notificacao.consultas.erros", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {} }
+    {
+      "name": "notificacao.consultas.erros",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "cadastro.consultas",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "clinica.eventos.erros"
+      }
+    },
+    {
+      "name": "cadastro.consultas.erros",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
   ],
   "bindings": [
-    { "source": "clinica.eventos", "vhost": "/", "destination": "notificacao.consultas", "destination_type": "queue", "routing_key": "consulta.*", "arguments": {} },
-    { "source": "clinica.eventos.erros", "vhost": "/", "destination": "notificacao.consultas.erros", "destination_type": "queue", "routing_key": "", "arguments": {} }
+    {
+      "source": "clinica.eventos",
+      "vhost": "/",
+      "destination": "notificacao.consultas",
+      "destination_type": "queue",
+      "routing_key": "consulta.*",
+      "arguments": {}
+    },
+    {
+      "source": "clinica.eventos.erros",
+      "vhost": "/",
+      "destination": "notificacao.consultas.erros",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "clinica.eventos",
+      "vhost": "/",
+      "destination": "cadastro.consultas",
+      "destination_type": "queue",
+      "routing_key": "consulta.agendada",
+      "arguments": {}
+    },
+    {
+      "source": "clinica.eventos.erros",
+      "vhost": "/",
+      "destination": "cadastro.consultas.erros",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "clinica.eventos",
+      "vhost": "/",
+      "destination": "notificacao.consultas",
+      "destination_type": "queue",
+      "routing_key": "paciente.atualizado",
+      "arguments": {}
+    }
   ]
 }

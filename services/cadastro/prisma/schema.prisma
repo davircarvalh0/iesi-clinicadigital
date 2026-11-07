@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Paciente {
+  id            String   @id @default(uuid())
+  cpf           String   @unique
+  nome          String
+  telefone      String
+  email         String?
+  revisao       Int      @default(1)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  @@map("pacientes")
+}
+
+model EventoProcessado {
+  idEvento     String   @id @map("id_evento")
+  tipo         String
+  processadoEm DateTime @default(now()) @map("processado_em") @db.Timestamptz(3)
+
+  @@map("eventos_processados")
+}
+
+model EventoSaida {
+  idEvento    String    @id @map("id_evento")
+  tipo        String
+  envelope    Json
+  criadoEm    DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  publicadoEm DateTime? @map("publicado_em") @db.Timestamptz(3)
+
+  @@index([publicadoEm, criadoEm])
+  @@map("eventos_saida")
+}
