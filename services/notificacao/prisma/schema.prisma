@@ -20,6 +20,7 @@ model Lembrete {
   id             String         @id @default(uuid())
   idConsulta     String         @unique @map("id_consulta")
   pacienteNome   String         @map("paciente_nome")
+  pacienteCpf    String?        @map("paciente_cpf")
   telefone       String
   profissional   String
   especialidade  String
@@ -33,7 +34,18 @@ model Lembrete {
   atualizadoEm   DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   @@index([status, enviarEm])
+  @@index([pacienteCpf])
   @@map("lembretes")
+}
+
+/// Projeção local do mestre. A revisão impede eventos antigos de desfazer correções.
+model ContatoPaciente {
+  cpf      String @id
+  nome     String
+  telefone String
+  revisao  Int
+
+  @@map("contatos_pacientes")
 }
 
 /// Idempotência do consumidor: cada id_evento é processado uma única vez.
