@@ -217,6 +217,24 @@ button.chip:hover { filter: brightness(0.96); }
 .campo input:focus, .campo select:focus { outline: none; border-color: var(--marca); box-shadow: 0 0 0 3px var(--marca-suave); }
 
 @keyframes surgir { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.indicador__valor--estado { font-size: 17px; margin-top: 10px; color: var(--texto-suave); }
+.pacientes .lista__titulo { display: flex; align-items: center; gap: 8px; }
+.pacientes__busca { display: flex; align-items: flex-end; gap: 12px; padding: 0 20px 20px; }
+.pacientes__busca .campo { flex: 1; min-width: 0; }
+.pacientes__resumo { padding: 12px 20px; background: var(--fundo-claro); color: var(--texto-suave); font-size: 13px; }
+.pacientes__lista { list-style: none; padding: 0; margin: 0; }
+.paciente { display: flex; gap: 16px; padding: 20px; align-items: center; border-top: 1px solid var(--borda-suave); }
+.paciente__dados { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 5px; font-size: 14px; color: var(--texto-suave); overflow-wrap: anywhere; }
+.paciente__dados h3 { font-size: 16px; color: var(--texto); }
+.paciente > .acao { flex-shrink: 0; }
+.pacientes__paginacao { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; font-size: 13px; }
+.pacientes__estado { display: grid; gap: 16px; padding: 20px; justify-items: start; }
+.pacientes__mensagem { margin: 0 20px 16px; color: var(--sucesso); background: var(--sucesso-fundo); }
+.dialogo-contato { border: 0; padding: 0; border-radius: 20px; width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 32px); color: var(--texto); }
+.dialogo-contato::backdrop { background: rgba(26, 48, 46, 0.32); backdrop-filter: blur(6px); }
+.dialogo-contato .modal { width: 100%; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); outline-offset: 3px; }
+
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulsar { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.4); opacity: 0; } }
 
@@ -227,7 +245,14 @@ button.chip:hover { filter: brightness(0.96); }
 }
 @media (max-width: 760px) {
   .layout { grid-template-columns: 1fr; }
-  .barra-lateral { display: none; }
+  .barra-lateral { position: static; height: auto; padding: 16px; }
+  .barra-lateral__secao { margin-top: 20px; }
+  .menu { flex-direction: row; flex-wrap: wrap; }
+  .paciente { flex-wrap: wrap; }
+  .paciente > .acao { margin-left: 60px; }
+  .pacientes__busca { flex-wrap: wrap; }
+  .pacientes__busca .campo { flex-basis: 100%; }
+  .pacientes__paginacao { flex-wrap: wrap; }
   .principal { padding: 24px 16px; }
   .coluna-direita { padding: 0 16px 24px; }
   .indicadores { grid-template-columns: 1fr; }

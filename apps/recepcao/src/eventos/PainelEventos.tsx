@@ -9,11 +9,12 @@ interface Props {
   atividades: Atividade[];
   notificacaoNoAr: boolean;
   notificacaoAcessivel: boolean;
+  cadastroEstado: 'no ar' | 'indisponível' | 'conectando';
 }
 
 const NOME_SERVICO = { agendamento: 'Agendamento', notificacao: 'Notificação' };
 
-export function PainelEventos({ eventos, atividades, notificacaoNoAr, notificacaoAcessivel }: Props) {
+export function PainelEventos({ eventos, atividades, notificacaoNoAr, notificacaoAcessivel, cadastroEstado }: Props) {
   const agora = useAgora();
   const itens = useMemo(() => montarFeed(eventos, atividades), [eventos, atividades]);
 
@@ -24,9 +25,8 @@ export function PainelEventos({ eventos, atividades, notificacaoNoAr, notificaca
           <span className="ao-vivo" /> Eventos em tempo real
         </h2>
         <div className="eventos__servicos">
-          {/* O Cadastro único é a próxima etapa do projeto; ainda não existe serviço para ele. */}
-          <span className="chip chip--apagado" title="Próxima etapa: serviço ainda não existe">
-            <span className="chip__ponto" /> Cadastro único
+          <span className={`chip ${cadastroEstado === 'no ar' ? 'chip--marca' : cadastroEstado === 'indisponível' ? 'chip--perigo' : 'chip--apagado'}`}>
+            <span className="chip__ponto" /> Cadastro único · {cadastroEstado}
           </span>
           <span className={`chip ${notificacaoNoAr ? 'chip--marca' : 'chip--perigo'}`}>
             <span className="chip__ponto" /> Notificação · {notificacaoAcessivel ? (notificacaoNoAr ? 'no ar' : 'fora do ar') : 'inacessível'}

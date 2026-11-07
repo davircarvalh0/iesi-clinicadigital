@@ -1,6 +1,6 @@
 import { Bell, Calendar, Plus, Users } from 'lucide-react';
 
-export function BarraLateral({ consultasHoje }: { consultasHoje: number }) {
+export function BarraLateral({ consultasHoje, tela }: { consultasHoje: number; tela: 'agenda' | 'pacientes' }) {
   return (
     <aside className="barra-lateral">
       <div className="marca">
@@ -15,12 +15,11 @@ export function BarraLateral({ consultasHoje }: { consultasHoje: number }) {
 
       <p className="barra-lateral__secao">Recepção</p>
       <nav className="menu">
-        <a className="menu__item menu__item--ativo" href="#">
+        <a className={`menu__item ${tela === 'agenda' ? 'menu__item--ativo' : ''}`} href="#agenda" aria-current={tela === 'agenda' ? 'page' : undefined}>
           <Calendar size={19} /> Agenda
           <span className="menu__contador">{consultasHoje}</span>
         </a>
-        {/* Próximas etapas: cadastro único de pacientes e tela de lembretes. */}
-        <a className="menu__item" href="#" onClick={(e) => e.preventDefault()}>
+        <a className={`menu__item ${tela === 'pacientes' ? 'menu__item--ativo' : ''}`} href="#pacientes" aria-current={tela === 'pacientes' ? 'page' : undefined}>
           <Users size={19} /> Pacientes
         </a>
         <a className="menu__item" href="#" onClick={(e) => e.preventDefault()}>

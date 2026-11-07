@@ -7,6 +7,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/api/cadastro': {
+        target: process.env.CADASTRO_URL ?? 'http://localhost:3003',
+        rewrite: (p) => p.replace(/^\/api\/cadastro/, ''),
+      },
       '/api/agendamento': {
         target: process.env.AGENDAMENTO_URL ?? 'http://localhost:3001',
         rewrite: (p) => p.replace(/^\/api\/agendamento/, ''),
