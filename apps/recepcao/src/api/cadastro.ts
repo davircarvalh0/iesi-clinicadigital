@@ -20,8 +20,12 @@ export interface PaginaPacientes {
 
 export const cadastroApi = {
   listar: (busca = '', pagina = 1, signal?: AbortSignal, tamanhoPagina = 20) =>
-    requisitar<PaginaPacientes>(`/api/cadastro/pacientes?${new URLSearchParams({ busca, pagina: String(pagina), tamanhoPagina: String(tamanhoPagina) })}`, { signal }),
+    requisitar<PaginaPacientes>(`/api/cadastro/pacientes?${new URLSearchParams({ busca, pagina: String(pagina), tamanhoPagina: String(tamanhoPagina) })}`, {
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000),
+    }),
   resumo: () => cadastroApi.listar('', 1, undefined, 1),
   atualizar: (id: string, contato: { telefone: string; email: string | null; revisao: number }) =>
-    requisitar<Paciente>(`/api/cadastro/pacientes/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(contato) }),
+    requisitar<Paciente>(`/api/cadastro/pacientes/${encodeURIComponent(id)}`, {
+      method: 'PATCH', body: JSON.stringify(contato), signal: AbortSignal.timeout(10000),
+    }),
 };

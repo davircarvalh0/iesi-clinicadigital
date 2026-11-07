@@ -10,10 +10,13 @@
     "postinstall": "npm run build -w @clinica/eventos && npm run prisma:generate --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:integracao": "node --test scripts/us07.integracao.test.mjs",
     "dev:agendamento": "npm run dev -w @clinica/agendamento",
     "dev:notificacao": "npm run dev -w @clinica/notificacao",
+    "dev:cadastro": "npm run dev -w @clinica/cadastro",
     "dev:recepcao": "npm run dev -w @clinica/recepcao",
-    "infra": "docker compose up -d rabbitmq db-agendamento db-notificacao",
+    "infra": "docker compose up -d rabbitmq db-agendamento db-notificacao db-cadastro",
     "demo:popular": "node scripts/popular-demo.mjs"
   },
   "devDependencies": {

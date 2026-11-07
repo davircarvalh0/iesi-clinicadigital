@@ -1,5 +1,5 @@
 import { Pencil, Search, Users } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { cadastroApi, type Paciente, type PaginaPacientes } from '../api/cadastro';
 import { iniciais, mascaraCpf, mascaraTelefone } from '../formatacao';
 import { ModalContato } from './ModalContato';
@@ -13,6 +13,8 @@ export function TelaPacientes({ aoAtualizar }: { aoAtualizar: () => void }) {
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
   const [editando, setEditando] = useState<Paciente | null>(null);
   const [mensagem, setMensagem] = useState('');
+  const botaoEdicao = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { if (!editando) botaoEdicao.current?.focus(); }, [editando]);
   useEffect(() => {
     const controle = new AbortController();
     setEstado('carregando');
@@ -57,7 +59,7 @@ export function TelaPacientes({ aoAtualizar }: { aoAtualizar: () => void }) {
             <div className="paciente__dados"><h3>{p.nome}</h3><span>CPF {mascaraCpf(p.cpf)}</span>
               <span>{mascaraTelefone(p.telefone)}</span><span>{p.email ?? 'E-mail não informado'}</span>
             </div>
-            <button className="acao" aria-label={`Editar contatos de ${p.nome}`} onClick={() => { setMensagem(''); setEditando(p); }}>
+            <button className="acao" aria-label={`Editar contatos de ${p.nome}`} onClick={(e) => { botaoEdicao.current = e.currentTarget; setMensagem(''); setEditando(p); }}>
               <Pencil size={15} aria-hidden="true" /> Editar contatos
             </button>
           </li>)}</ul>}

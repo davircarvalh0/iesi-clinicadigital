@@ -1,4 +1,4 @@
-import type { Channel, ConsumeMessage } from 'amqplib';
+import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import { ehEventoConsulta, ehPacienteAtualizado, FILA_NOTIFICACAO, type EventoConsulta, type PacienteAtualizado } from '@clinica/eventos';
 import { registrarAtividade } from '../atividades/registro';
 import { prisma } from '../db';
@@ -6,12 +6,12 @@ import { tratarEvento } from './tratadores';
 
 const HEADER_TENTATIVAS = 'x-tentativas';
 
-let canal: Channel;
+let canal: ConfirmChannel;
 let maxTentativas = 3;
 let consumerTag: string | null = null;
 
 /** Assina a fila da Notificação. Cada mensagem só recebe ack depois de processada. */
-export async function iniciarConsumidor(canalRabbit: Channel, tentativas: number): Promise<void> {
+export async function iniciarConsumidor(canalRabbit: ConfirmChannel, tentativas: number): Promise<void> {
   canal = canalRabbit;
   maxTentativas = tentativas;
   await retomarConsumo();
@@ -87,14 +87,16 @@ async function tratarFalha(msg: ConsumeMessage, evento: EventoConsulta | Pacient
 
   if (tentativa < maxTentativas) {
     await new Promise((r) => setTimeout(r, 1000 * tentativa));
-    canal.sendToQueue(FILA_NOTIFICACAO, msg.content, {
-      persistent: true,
-      contentType: msg.properties.contentType,
-      messageId: msg.properties.messageId,
-      type: msg.properties.type,
-      headers: { ...msg.properties.headers, [HEADER_TENTATIVAS]: tentativa },
-    });
-    canal.ack(msg);
+    try {
+      await new Promise<void>((resolve, reject) => canal.sendToQueue(FILA_NOTIFICACAO, msg.content, {
+        persistent: true,
+        contentType: msg.properties.contentType,
+        messageId: msg.properties.messageId,
+        type: msg.properties.type,
+        headers: { ...msg.properties.headers, [HEADER_TENTATIVAS]: tentativa },
+      }, (erro) => erro ? reject(erro) : resolve()));
+      canal.ack(msg);
+    } catch { canal.nack(msg, false, true); return; }
     await registrarAtividade({ ...base, acao: 'evento.nova_tentativa', descricao: `${evento.tipo}: nova tentativa ${tentativa + 1}/${maxTentativas}` }).catch(() => {});
   } else {
     canal.nack(msg, false, false);

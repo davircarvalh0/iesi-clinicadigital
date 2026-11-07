@@ -23,7 +23,7 @@ export async function conectarRabbit(url: string, tentativas = 30): Promise<Chan
 
 /** Garante a fila da Notificação e sua fila de erros (mesmos argumentos de infra/rabbitmq/definitions.json). */
 export async function abrirCanalConsumo(conexao: ChannelModel) {
-  const canal = await conexao.createChannel();
+  const canal = await conexao.createConfirmChannel();
   await canal.assertExchange(EXCHANGE_EVENTOS, 'topic', { durable: true });
   await canal.assertExchange(EXCHANGE_ERROS, 'fanout', { durable: true });
   await canal.assertQueue(FILA_NOTIFICACAO, {

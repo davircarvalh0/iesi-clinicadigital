@@ -1,0 +1,17 @@
+
+> test:integracao
+> node --test scripts/us07.integracao.test.mjs
+
+▶ US-07: mestre real, busca, edição, concorrência, eventos e idempotência
+  ✔ CA1/CA3: duas consultas geram um único paciente; total vem do mestre (533.2497ms)
+  ✔ CA2: edição retorna valores normalizados; erro não altera o mestre; revisão evita perda (119.8778ms)
+  ✔ paciente.atualizado v1 correlacionado sincroniza lembretes e ignora eventos antigos/duplicados (1996.0657ms)
+✔ US-07: mestre real, busca, edição, concorrência, eventos e idempotência (2818.5782ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3072.2069
