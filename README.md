@@ -14,6 +14,7 @@ docker compose up --build
 | Tela da recepção | http://localhost:8080 |
 | Agendamento (API) | http://localhost:3001 |
 | Notificação (API) | http://localhost:3002 |
+| Cadastro único (API) | http://localhost:3003 |
 | Painel do RabbitMQ | http://localhost:15672 (clinica / clinica) |
 
 Para popular a agenda com as consultas do protótipo (passa pela API, então gera eventos e lembretes reais):
@@ -33,12 +34,15 @@ npm run demo:popular
 
 ```bash
 npm install                 # também compila @clinica/eventos e gera os clients do Prisma
-npm run infra               # sobe só RabbitMQ e os dois Postgres
+npm run infra               # sobe RabbitMQ e os três Postgres
 cp services/agendamento/.env.example services/agendamento/.env
 cp services/notificacao/.env.example services/notificacao/.env
+cp services/cadastro/.env.example services/cadastro/.env
 npm run prisma:deploy -w @clinica/agendamento && npm run prisma:deploy -w @clinica/notificacao
 npm run dev:agendamento     # em terminais separados
 npm run dev:notificacao
+npm run prisma:deploy -w @clinica/cadastro
+npm run dev:cadastro
 npm run dev:recepcao        # http://localhost:5173
 ```
 
@@ -51,8 +55,9 @@ Ao mudar o pacote de eventos: `npm run build -w @clinica/eventos`.
 packages/eventos        contrato compartilhado: envelope, tipos dos eventos e nomes do barramento
 services/agendamento    consultas + outbox + publicador (Postgres próprio, porta 3001)
 services/notificacao    consumidor idempotente + lembretes + rotina de envio + canais (Postgres próprio, porta 3002)
+services/cadastro       paciente mestre por CPF + busca/edição + outbox (Postgres próprio, porta 3003)
   src/canais            adaptadores de terceiros: CanalEnvio, CanalWhatsApp, CanalLog
-apps/recepcao           tela React (Vite); chama /api/agendamento e /api/notificacao
+apps/recepcao           tela React (Vite); chama /api/agendamento, /api/notificacao e /api/cadastro
 infra/rabbitmq          topologia declarada (exchange clinica.eventos, fila notificacao.consultas, fila de erros)
 ```
 
@@ -72,3 +77,23 @@ Recepção ──HTTP (polling)──▶ Notificação GET /lembretes
 
 Regras: serviços não se chamam diretamente, cada um tem seu banco, terceiros entram por adaptadores
 e eventos não carregam conteúdo clínico.
+
+## Pacientes reais (US-07)
+
+Clique em **Pacientes** para buscar por nome (sem distinguir maiúsculas/minúsculas) ou CPF, com ou sem máscara.
+**Editar contatos** altera telefone e e-mail no Cadastro único e exibe o retorno do servidor.
+O total é contado no cadastro mestre, independentemente de consultas, filtros e paginação.
+Agendamentos criam/vinculam pacientes por CPF via RabbitMQ; novas consultas não sobrescrevem contatos já corrigidos.
+Alterações publicam `paciente.atualizado` v1 e atualizam a cópia de contato dos lembretes pendentes.
+
+```bash
+npm run typecheck
+npm run build
+npm test
+# Com Compose ativo e CANAL_ENVIO=log, em ambiente local de demonstração:
+npm run test:integracao
+```
+
+Os testes de integração criam somente dados fictícios e os mantêm para inspeção. Para outra porta do gateway,
+defina `TEST_BASE_URL` (por exemplo, `http://localhost:18080`). Os contratos REST, eventos, evidências e limites
+estão em [docs/US-07.md](docs/US-07.md).

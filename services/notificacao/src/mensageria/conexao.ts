@@ -1,6 +1,7 @@
 import amqp, { type ChannelModel } from 'amqplib';
 import {
   BINDING_NOTIFICACAO,
+  BINDING_PACIENTE,
   EXCHANGE_ERROS,
   EXCHANGE_EVENTOS,
   FILA_NOTIFICACAO,
@@ -22,7 +23,7 @@ export async function conectarRabbit(url: string, tentativas = 30): Promise<Chan
 
 /** Garante a fila da Notificação e sua fila de erros (mesmos argumentos de infra/rabbitmq/definitions.json). */
 export async function abrirCanalConsumo(conexao: ChannelModel) {
-  const canal = await conexao.createChannel();
+  const canal = await conexao.createConfirmChannel();
   await canal.assertExchange(EXCHANGE_EVENTOS, 'topic', { durable: true });
   await canal.assertExchange(EXCHANGE_ERROS, 'fanout', { durable: true });
   await canal.assertQueue(FILA_NOTIFICACAO, {
@@ -31,6 +32,7 @@ export async function abrirCanalConsumo(conexao: ChannelModel) {
   });
   await canal.assertQueue(FILA_NOTIFICACAO_ERROS, { durable: true });
   await canal.bindQueue(FILA_NOTIFICACAO, EXCHANGE_EVENTOS, BINDING_NOTIFICACAO);
+  await canal.bindQueue(FILA_NOTIFICACAO, EXCHANGE_EVENTOS, BINDING_PACIENTE);
   await canal.bindQueue(FILA_NOTIFICACAO_ERROS, EXCHANGE_ERROS, '');
   await canal.prefetch(1);
   return canal;

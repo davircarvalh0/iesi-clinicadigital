@@ -46,6 +46,36 @@ services:
       interval: 3s
       retries: 20
 
+  db-cadastro:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: cadastro
+      POSTGRES_PASSWORD: cadastro
+      POSTGRES_DB: cadastro
+    ports:
+      - "5435:5432"
+    volumes:
+      - db-cadastro-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cadastro"]
+      interval: 3s
+      retries: 20
+
+  cadastro:
+    build:
+      context: .
+      dockerfile: services/cadastro/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORTA: 3003
+      DATABASE_URL: postgresql://cadastro:cadastro@db-cadastro:5432/cadastro
+      RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
+    ports:
+      - "3003:3003"
+    depends_on:
+      db-cadastro: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
   agendamento:
     build:
       context: .
@@ -92,8 +122,10 @@ services:
     depends_on:
       - agendamento
       - notificacao
+      - cadastro
 
 volumes:
   rabbitmq-dados:
   db-agendamento-dados:
   db-notificacao-dados:
+  db-cadastro-dados:

@@ -4,10 +4,8 @@ import type { CanalEnvio, MensagemLembrete, ResultadoEnvio } from './canal-envio
 export class CanalLog implements CanalEnvio {
   readonly nome = 'log';
 
-  async enviar(m: MensagemLembrete): Promise<ResultadoEnvio> {
-    console.log(
-      `[canal-log] lembrete para ${m.pacienteNome} (${m.telefone}): ${m.especialidade} com ${m.profissional} em ${m.inicioConsulta.toISOString()}`,
-    );
+  async enviar(_m: MensagemLembrete): Promise<ResultadoEnvio> {
+    console.log('[canal-log] envio simulado concluído; dados pessoais omitidos');
     return { idExterno: `log-${Date.now()}` };
   }
 }

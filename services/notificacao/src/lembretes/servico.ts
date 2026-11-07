@@ -21,6 +21,7 @@ export function calcularEnvio(inicioConsulta: Date): Date {
 export async function programar(tx: Prisma.TransactionClient, payload: PayloadConsulta, idEvento: string) {
   const inicio = new Date(payload.inicio);
   const dados = {
+    pacienteCpf: payload.paciente.cpf,
     pacienteNome: payload.paciente.nome,
     telefone: payload.paciente.telefone,
     profissional: payload.profissional,
@@ -57,6 +58,9 @@ export async function reprogramar(tx: Prisma.TransactionClient, payload: Payload
   const lembrete = await tx.lembrete.update({
     where: { id: existente.id },
     data: {
+      pacienteCpf: payload.paciente.cpf,
+      pacienteNome: payload.paciente.nome,
+      telefone: payload.paciente.telefone,
       inicioConsulta: inicio,
       enviarEm: calcularEnvio(inicio),
       status: 'programado',

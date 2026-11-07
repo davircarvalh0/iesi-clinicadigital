@@ -1,17 +1,17 @@
-import type { Channel, ConsumeMessage } from 'amqplib';
-import { ehEventoConsulta, FILA_NOTIFICACAO, type EventoConsulta } from '@clinica/eventos';
+import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
+import { ehEventoConsulta, ehPacienteAtualizado, FILA_NOTIFICACAO, type EventoConsulta, type PacienteAtualizado } from '@clinica/eventos';
 import { registrarAtividade } from '../atividades/registro';
 import { prisma } from '../db';
 import { tratarEvento } from './tratadores';
 
 const HEADER_TENTATIVAS = 'x-tentativas';
 
-let canal: Channel;
+let canal: ConfirmChannel;
 let maxTentativas = 3;
 let consumerTag: string | null = null;
 
 /** Assina a fila da Notificação. Cada mensagem só recebe ack depois de processada. */
-export async function iniciarConsumidor(canalRabbit: Channel, tentativas: number): Promise<void> {
+export async function iniciarConsumidor(canalRabbit: ConfirmChannel, tentativas: number): Promise<void> {
   canal = canalRabbit;
   maxTentativas = tentativas;
   await retomarConsumo();
@@ -59,9 +59,9 @@ async function processar(msg: ConsumeMessage): Promise<void> {
     if (duplicado) {
       await registrarAtividade({
         acao: 'evento.duplicado',
-        descricao: `${evento.tipo} repetido ignorado (${evento.payload.paciente.nome})`,
+        descricao: `${evento.tipo} repetido ignorado`,
         idEvento: evento.id_evento,
-        idConsulta: evento.payload.id_consulta,
+        idConsulta: evento.tipo === 'paciente.atualizado' ? undefined : evento.payload.id_consulta,
       });
     }
     canal.ack(msg);
@@ -70,31 +70,33 @@ async function processar(msg: ConsumeMessage): Promise<void> {
   }
 }
 
-function lerEvento(msg: ConsumeMessage): EventoConsulta | null {
+function lerEvento(msg: ConsumeMessage): EventoConsulta | PacienteAtualizado | null {
   try {
     const valor: unknown = JSON.parse(msg.content.toString());
-    return ehEventoConsulta(valor) ? valor : null;
+    return ehPacienteAtualizado(valor) || ehEventoConsulta(valor) ? valor : null;
   } catch {
     return null;
   }
 }
 
 /** Tenta de novo republicando na própria fila; esgotadas as tentativas, manda para a fila de erros. */
-async function tratarFalha(msg: ConsumeMessage, evento: EventoConsulta, erro: unknown): Promise<void> {
+async function tratarFalha(msg: ConsumeMessage, evento: EventoConsulta | PacienteAtualizado, _erro: unknown): Promise<void> {
   const tentativa = Number(msg.properties.headers?.[HEADER_TENTATIVAS] ?? 0) + 1;
-  const base = { idEvento: evento.id_evento, idConsulta: evento.payload.id_consulta };
-  console.error(`[consumidor] falha ao processar ${evento.id_evento} (tentativa ${tentativa})`, erro);
+  const base = { idEvento: evento.id_evento, idConsulta: evento.tipo === 'paciente.atualizado' ? undefined : evento.payload.id_consulta };
+  console.error(`[consumidor] falha ao processar ${evento.id_evento} (tentativa ${tentativa})`);
 
   if (tentativa < maxTentativas) {
     await new Promise((r) => setTimeout(r, 1000 * tentativa));
-    canal.sendToQueue(FILA_NOTIFICACAO, msg.content, {
-      persistent: true,
-      contentType: msg.properties.contentType,
-      messageId: msg.properties.messageId,
-      type: msg.properties.type,
-      headers: { ...msg.properties.headers, [HEADER_TENTATIVAS]: tentativa },
-    });
-    canal.ack(msg);
+    try {
+      await new Promise<void>((resolve, reject) => canal.sendToQueue(FILA_NOTIFICACAO, msg.content, {
+        persistent: true,
+        contentType: msg.properties.contentType,
+        messageId: msg.properties.messageId,
+        type: msg.properties.type,
+        headers: { ...msg.properties.headers, [HEADER_TENTATIVAS]: tentativa },
+      }, (erro) => erro ? reject(erro) : resolve()));
+      canal.ack(msg);
+    } catch { canal.nack(msg, false, true); return; }
     await registrarAtividade({ ...base, acao: 'evento.nova_tentativa', descricao: `${evento.tipo}: nova tentativa ${tentativa + 1}/${maxTentativas}` }).catch(() => {});
   } else {
     canal.nack(msg, false, false);
