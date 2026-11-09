@@ -45,6 +45,20 @@
   ],
   "queues": [
     {
+      "name": "agendamento.pacientes",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-dead-letter-exchange": "clinica.eventos.erros" }
+    },
+    {
+      "name": "agendamento.pacientes.erros",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
       "name": "notificacao.consultas",
       "vhost": "/",
       "durable": true,
@@ -78,6 +92,22 @@
     }
   ],
   "bindings": [
+    {
+      "source": "clinica.eventos",
+      "vhost": "/",
+      "destination": "agendamento.pacientes",
+      "destination_type": "queue",
+      "routing_key": "paciente.atualizado",
+      "arguments": {}
+    },
+    {
+      "source": "clinica.eventos.erros",
+      "vhost": "/",
+      "destination": "agendamento.pacientes.erros",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
     {
       "source": "clinica.eventos",
       "vhost": "/",

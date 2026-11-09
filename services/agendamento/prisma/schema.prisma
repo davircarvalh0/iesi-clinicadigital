@@ -15,6 +15,8 @@ enum StatusConsulta {
 
 model Consulta {
   id               String         @id @default(uuid())
+  idPaciente       String?        @map("id_paciente")
+  vinculoPacientePendente Boolean @default(false) @map("vinculo_paciente_pendente")
   pacienteNome     String         @map("paciente_nome")
   pacienteCpf      String         @map("paciente_cpf")
   pacienteTelefone String         @map("paciente_telefone")
@@ -27,6 +29,12 @@ model Consulta {
 
   @@index([inicio])
   @@map("consultas")
+}
+
+model EventoProcessado {
+  idEvento String @id @map("id_evento")
+
+  @@map("eventos_processados")
 }
 
 /// Outbox: o evento é gravado na mesma transação da consulta e publicado depois pelo publicador.

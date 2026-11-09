@@ -13,6 +13,8 @@ export function agendar(dados: NovaConsulta): Promise<Consulta> {
   return prisma.$transaction(async (tx) => {
     const consulta = await tx.consulta.create({
       data: {
+        idPaciente: dados.idPaciente,
+        vinculoPacientePendente: true,
         pacienteNome: dados.nome,
         pacienteCpf: dados.cpf,
         pacienteTelefone: dados.telefone,
