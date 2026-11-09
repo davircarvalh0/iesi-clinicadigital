@@ -2,6 +2,7 @@ import { criarApp } from './app';
 import { config } from './config';
 import { prisma } from './db';
 import { abrirCanalPublicacao, conectarRabbit } from './mensageria/conexao';
+import { iniciarConsumidorPacientes } from './mensageria/consumidor-pacientes';
 import { iniciarPublicador } from './outbox/publicador';
 
 async function main() {
@@ -15,6 +16,8 @@ async function main() {
   });
 
   const canal = await abrirCanalPublicacao(conexao);
+  const consumo = await conexao.createConfirmChannel();
+  await iniciarConsumidorPacientes(consumo);
   const pararPublicador = iniciarPublicador(canal, config.outboxIntervaloMs);
 
   const servidor = criarApp().listen(config.porta, () => {

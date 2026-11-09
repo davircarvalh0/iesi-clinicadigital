@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+export const esquemaBuscaCpf = z.object({
+  cpf: z.string().trim().regex(/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
+    .transform((cpf) => cpf.replace(/\D/g, '')),
+}).strict();
+
 export const esquemaBusca = z.object({
   busca: z.string().trim().max(120).default(''),
   pagina: z.coerce.number().int().min(1).max(100000).default(1),

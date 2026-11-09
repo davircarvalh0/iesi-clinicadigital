@@ -16,6 +16,6 @@ export const tratarErros: ErrorRequestHandler = (erro, _req, res, _next) => {
     res.status(erro.status).json({ erro: erro.message });
     return;
   }
-  console.error(erro);
+  console.error('[agendamento] requisição falhou');
   res.status(500).json({ erro: 'Erro interno' });
 };

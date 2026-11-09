@@ -1,7 +1,7 @@
 import { criarEnvelope } from '@clinica/eventos';
 import { Prisma, type Paciente } from '../generated/prisma';
 import { prisma } from './db';
-import { esquemaBusca, esquemaContato, esquemaPacienteAgendado } from './validacao';
+import { esquemaBusca, esquemaBuscaCpf, esquemaContato, esquemaPacienteAgendado } from './validacao';
 
 export class ErroCadastro extends Error {
   constructor(public status: number, mensagem: string) { super(mensagem); }
@@ -32,6 +32,14 @@ export async function listar(entrada: unknown) {
     prisma.paciente.count({ where }), prisma.paciente.count(),
   ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   return { pacientes, total, totalFiltrado, pagina, tamanhoPagina };
+}
+
+export function buscarPorCpf(entrada: unknown) {
+  const { cpf } = esquemaBuscaCpf.parse(entrada);
+  return prisma.paciente.findUnique({
+    where: { cpf },
+    select: { id: true, cpf: true, nome: true, telefone: true },
+  });
 }
 
 export async function atualizar(id: string, entrada: unknown) {

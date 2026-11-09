@@ -14,3 +14,5 @@ export const FILA_CADASTRO = 'cadastro.consultas';
 export const FILA_CADASTRO_ERROS = 'cadastro.consultas.erros';
 export const BINDING_CADASTRO = 'consulta.agendada';
 export const BINDING_PACIENTE = 'paciente.atualizado';
+export const FILA_AGENDAMENTO = 'agendamento.pacientes';
+export const FILA_AGENDAMENTO_ERROS = 'agendamento.pacientes.erros';

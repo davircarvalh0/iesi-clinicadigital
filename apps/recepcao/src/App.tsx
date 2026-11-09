@@ -92,7 +92,7 @@ export function App() {
       </div>
 
       {modal && (
-        <ModalConsulta modo={modal} consultas={listaConsultas} aoFechar={() => setModal(null)} aoSalvar={atualizar} />
+        <ModalConsulta modo={modal} aoFechar={() => setModal(null)} aoSalvar={atualizar} />
       )}
     </div>
   );

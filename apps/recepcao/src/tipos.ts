@@ -5,6 +5,8 @@ export type StatusLembrete = 'programado' | 'enviado' | 'falhou' | 'cancelado';
 
 export interface Consulta {
   id: string;
+  idPaciente: string | null;
+  vinculoPacientePendente: boolean;
   pacienteNome: string;
   pacienteCpf: string;
   pacienteTelefone: string;
@@ -24,6 +26,7 @@ export interface Lembrete {
 }
 
 export interface NovaConsulta {
+  idPaciente?: string;
   nome: string;
   cpf: string;
   telefone: string;

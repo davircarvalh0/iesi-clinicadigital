@@ -137,7 +137,6 @@ button:disabled { cursor: default; }
 .chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border: 0; border-radius: 999px;
   font-size: 13px; font-weight: 700; white-space: nowrap; }
 .chip--marca { background: var(--marca-suave); color: var(--marca-forte); }
-.chip--info { background: var(--info-fundo); color: var(--info); }
 .chip--perigo { background: var(--perigo-fundo); color: var(--perigo); }
 .chip--apagado { background: var(--neutro-fundo); color: var(--texto-apagado); }
 .chip__ponto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -205,10 +204,11 @@ button.chip:hover { filter: brightness(0.96); }
 .modal { width: min(540px, 100%); background: var(--cartao); border-radius: 20px; padding: 28px 24px 24px;
   display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; row-gap: 14px; box-shadow: 0 24px 60px rgba(26, 48, 46, 0.2); }
 .modal__titulo { grid-column: 1 / -1; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
-.modal__exemplos, .modal__subtitulo { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+.modal__subtitulo { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
   margin: -4px 0 4px; font-size: 13.5px; color: var(--texto-suave); }
-.modal__exemplos .chip { padding: 4px 10px; }
 .modal__acoes { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.modal__busca { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.modal__busca .campo { flex: 1 1 160px; }
 .campo { display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 600; color: var(--texto-medio); }
 .campo--inteiro { grid-column: 1 / -1; }
 .campo input, .campo select { height: 42px; padding: 0 14px; border: 1px solid var(--borda-campo); border-radius: 10px;

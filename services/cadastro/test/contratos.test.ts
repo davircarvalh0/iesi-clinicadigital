@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ehPacienteAtualizado } from '@clinica/eventos';
-import { esquemaBusca, esquemaContato, esquemaPacienteAgendado } from '../src/validacao';
+import { esquemaBusca, esquemaBuscaCpf, esquemaContato, esquemaPacienteAgendado } from '../src/validacao';
 import { mascaraCpf, mascaraTelefone } from '../../../apps/recepcao/src/formatacao';
 
 test('contato normaliza máscara, permite remover e-mail e protege identidade/revisão', () => {
@@ -24,6 +24,15 @@ test('busca tem limites, paginação e não confunde CPF mascarado com nome', ()
   assert.equal(mascaraCpf('00012345678'), '000.123.456-78');
   assert.equal(mascaraTelefone('5581900000001'), '(81) 90000-0001');
   assert.equal(mascaraTelefone('8130000001'), '(81) 3000-0001');
+});
+
+test('busca exata por CPF aceita máscara ou dígitos e rejeita buscas parciais', () => {
+  for (const cpf of ['000.123.456-78', '00012345678']) {
+    assert.deepEqual(esquemaBuscaCpf.parse({ cpf }), { cpf: '00012345678' });
+  }
+  for (const cpf of ['000.123', 'abc00012345678', '000123456789', 12345678901]) {
+    assert.equal(esquemaBuscaCpf.safeParse({ cpf }).success, false);
+  }
 });
 
 test('contratos rejeitam versões desconhecidas e payloads incompletos', () => {
