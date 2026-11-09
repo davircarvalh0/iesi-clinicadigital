@@ -97,3 +97,12 @@ npm run test:integracao
 Os testes de integração criam somente dados fictícios e os mantêm para inspeção. Para outra porta do gateway,
 defina `TEST_BASE_URL` (por exemplo, `http://localhost:18080`). Os contratos REST, eventos, evidências e limites
 estão em [docs/US-07.md](docs/US-07.md).
+
+## Reutilizar paciente no agendamento (US-08)
+
+Em **Nova consulta**, digite o CPF completo e clique em **Buscar CPF**. Se o Cadastro encontrar o
+paciente, o formulário preenche nome e telefone e usa o ID mestre. Para CPF novo, informe os
+dados manualmente. Se o Cadastro estiver indisponível, é possível tentar novamente ou continuar
+com dados manuais. A agenda mostra o vínculo pendente até receber a confirmação por evento.
+
+O contrato e o roteiro de validação em um Compose isolado estão em [docs/US-08.md](docs/US-08.md).
