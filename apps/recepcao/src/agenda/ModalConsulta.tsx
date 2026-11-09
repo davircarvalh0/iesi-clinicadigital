@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { agendamentoApi } from '../api/agendamento';
-import { PACIENTE_PADRAO, pacienteNovo } from '../dados/exemplos';
 import { ESPECIALIDADES, PROFISSIONAIS } from '../dados/profissionais';
 import { chaveDia, chaveDiaDaqui, dataHora, hora, isoRecife, mascaraCpf, mascaraTelefone } from '../formatacao';
 import type { Consulta } from '../tipos';
@@ -9,7 +8,6 @@ export type ModoModal = { tipo: 'nova' } | { tipo: 'remarcar'; consulta: Consult
 
 interface Props {
   modo: ModoModal;
-  consultas: Consulta[];
   aoFechar: () => void;
   aoSalvar: () => Promise<unknown>;
 }
@@ -31,7 +29,7 @@ function formInicial(modo: ModoModal): Form {
   return { ...FORM_VAZIO, data: chaveDia(inicio), hora: hora(modo.consulta.inicio) };
 }
 
-export function ModalConsulta({ modo, consultas, aoFechar, aoSalvar }: Props) {
+export function ModalConsulta({ modo, aoFechar, aoSalvar }: Props) {
   const remarcando = modo.tipo === 'remarcar';
   const [form, setForm] = useState<Form>(() => formInicial(modo));
   const [erro, setErro] = useState<string | null>(null);
@@ -48,17 +46,6 @@ export function ModalConsulta({ modo, consultas, aoFechar, aoSalvar }: Props) {
   const escolherProfissional = (nome: string) => {
     const profissional = PROFISSIONAIS.find((p) => p.nome === nome);
     alterar({ profissional: nome, especialidade: profissional?.especialidade ?? form.especialidade });
-  };
-
-  const preencherNovo = () => {
-    const p = pacienteNovo(consultas.map((c) => c.pacienteNome));
-    alterar({ nome: p.nome, cpf: mascaraCpf(p.cpf), telefone: mascaraTelefone(p.telefone) });
-  };
-
-  const preencherCadastrado = () => {
-    const c = consultas[0];
-    const p = c ? { nome: c.pacienteNome, cpf: c.pacienteCpf, telefone: c.pacienteTelefone } : PACIENTE_PADRAO;
-    alterar({ nome: p.nome, cpf: mascaraCpf(p.cpf), telefone: mascaraTelefone(p.telefone) });
   };
 
   const enviar = async (e: FormEvent) => {
@@ -87,15 +74,9 @@ export function ModalConsulta({ modo, consultas, aoFechar, aoSalvar }: Props) {
       <form className="modal" onMouseDown={(e) => e.stopPropagation()} onSubmit={enviar}>
         <h2 className="modal__titulo">{remarcando ? 'Remarcar consulta' : 'Nova consulta'}</h2>
 
-        {modo.tipo === 'remarcar' ? (
+        {modo.tipo === 'remarcar' && (
           <p className="modal__subtitulo">
             {modo.consulta.pacienteNome} · {modo.consulta.profissional} · atual: {dataHora(modo.consulta.inicio)}
-          </p>
-        ) : (
-          <p className="modal__exemplos">
-            Preencher exemplo:
-            <button type="button" className="chip chip--marca" onClick={preencherNovo}>paciente novo</button>
-            <button type="button" className="chip chip--info" onClick={preencherCadastrado}>CPF já cadastrado</button>
           </p>
         )}
 
