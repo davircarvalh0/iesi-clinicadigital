@@ -10,6 +10,8 @@ export interface Paciente {
   atualizadoEm: string;
 }
 
+export type PacienteAgendamento = Pick<Paciente, 'id' | 'cpf' | 'nome' | 'telefone'>;
+
 export interface PaginaPacientes {
   pacientes: Paciente[];
   total: number;
@@ -19,6 +21,11 @@ export interface PaginaPacientes {
 }
 
 export const cadastroApi = {
+  buscarPorCpf: (cpf: string, signal: AbortSignal) =>
+    requisitar<{ paciente: PacienteAgendamento | null }>('/api/cadastro/pacientes/busca-cpf', {
+      method: 'POST', body: JSON.stringify({ cpf }),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]),
+    }),
   listar: (busca = '', pagina = 1, signal?: AbortSignal, tamanhoPagina = 20) =>
     requisitar<PaginaPacientes>(`/api/cadastro/pacientes?${new URLSearchParams({ busca, pagina: String(pagina), tamanhoPagina: String(tamanhoPagina) })}`, {
       signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000),

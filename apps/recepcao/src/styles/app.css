@@ -207,6 +207,8 @@ button.chip:hover { filter: brightness(0.96); }
 .modal__subtitulo { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
   margin: -4px 0 4px; font-size: 13.5px; color: var(--texto-suave); }
 .modal__acoes { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.modal__busca { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.modal__busca .campo { flex: 1 1 160px; }
 .campo { display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 600; color: var(--texto-medio); }
 .campo--inteiro { grid-column: 1 / -1; }
 .campo input, .campo select { height: 42px; padding: 0 14px; border: 1px solid var(--borda-campo); border-radius: 10px;

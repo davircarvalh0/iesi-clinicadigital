@@ -58,6 +58,7 @@ export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: 
             </Selo>
           )}
         </div>
+        {c.vinculoPacientePendente && <Selo tom="alerta">Vínculo com Cadastro pendente</Selo>}
         {!cancelada && (
           <div className="consulta__acoes">
             <button className="acao" onClick={aoRemarcar}>
