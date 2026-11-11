@@ -12,7 +12,11 @@ test('contato normaliza máscara, permite remover e-mail e protege identidade/re
     { telefone: '123', email: null, revisao: 1 },
     { telefone: '81900000001', email: 'invalido', revisao: 1 },
     { telefone: '81900000001', email: null },
-    { telefone: '81900000001', email: null, revisao: 1, cpf: '00000000000' },
+    { telefone: '81900000001', email: null, revisao: 1, cpf: 'inválido' },
+    { revisao: 1 },
+    { revisao: 1, nascimento: '2024-02-30' },
+    { revisao: 1, nascimento: '2999-01-01' },
+    { revisao: 1, convenio: 'x'.repeat(121) },
   ]) assert.equal(esquemaContato.safeParse(entrada).success, false);
 });
 
