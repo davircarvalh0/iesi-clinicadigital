@@ -29,7 +29,7 @@ export function TelaPacientes({ aoAtualizar }: { aoAtualizar: () => void }) {
   function salvo(paciente: Paciente) {
     // Exibe o retorno confirmado pelo servidor, incluindo normalização e revisão.
     setDados((atual) => atual && { ...atual, pacientes: atual.pacientes.map((p) => p.id === paciente.id ? paciente : p) });
-    setEditando(null); setMensagem('Contatos atualizados com sucesso.'); aoAtualizar();
+    setEditando(null); setMensagem('Cadastro atualizado com sucesso.'); aoAtualizar();
   }
   const paginas = Math.max(1, Math.ceil((dados?.totalFiltrado ?? 0) / (dados?.tamanhoPagina ?? 20)));
   return (
@@ -59,8 +59,8 @@ export function TelaPacientes({ aoAtualizar }: { aoAtualizar: () => void }) {
             <div className="paciente__dados"><h3>{p.nome}</h3><span>CPF {mascaraCpf(p.cpf)}</span>
               <span>{mascaraTelefone(p.telefone)}</span><span>{p.email ?? 'E-mail não informado'}</span>
             </div>
-            <button className="acao" aria-label={`Editar contatos de ${p.nome}`} onClick={(e) => { botaoEdicao.current = e.currentTarget; setMensagem(''); setEditando(p); }}>
-              <Pencil size={15} aria-hidden="true" /> Editar contatos
+            <button className="acao" aria-label={`Editar cadastro de ${p.nome}`} onClick={(e) => { botaoEdicao.current = e.currentTarget; setMensagem(''); setEditando(p); }}>
+              <Pencil size={15} aria-hidden="true" /> Editar cadastro
             </button>
           </li>)}</ul>}
         {paginas > 1 && <nav className="pacientes__paginacao" aria-label="Paginação de pacientes">
