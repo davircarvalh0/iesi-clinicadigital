@@ -7,7 +7,11 @@ export interface Paciente {
   telefone: string;
   email: string | null;
   revisao: number;
-  atualizadoEm: string;
+}
+
+export interface PacienteDetalhe extends Paciente {
+  nascimento: string | null;
+  convenio: string | null;
 }
 
 export type PacienteAgendamento = Pick<Paciente, 'id' | 'cpf' | 'nome' | 'telefone'>;
@@ -31,8 +35,12 @@ export const cadastroApi = {
       signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000),
     }),
   resumo: () => cadastroApi.listar('', 1, undefined, 1),
-  atualizar: (id: string, contato: { telefone: string; email: string | null; revisao: number }) =>
-    requisitar<Paciente>(`/api/cadastro/pacientes/${encodeURIComponent(id)}`, {
+  detalhar: (id: string, signal: AbortSignal) =>
+    requisitar<PacienteDetalhe>(`/api/cadastro/pacientes/${encodeURIComponent(id)}`, {
+      signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]),
+    }),
+  atualizar: (id: string, contato: Pick<PacienteDetalhe, 'telefone' | 'email' | 'nascimento' | 'convenio' | 'revisao'>) =>
+    requisitar<PacienteDetalhe>(`/api/cadastro/pacientes/${encodeURIComponent(id)}`, {
       method: 'PATCH', body: JSON.stringify(contato), signal: AbortSignal.timeout(10000),
     }),
 };

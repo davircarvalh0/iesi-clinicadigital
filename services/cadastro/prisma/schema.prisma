@@ -14,6 +14,8 @@ model Paciente {
   nome          String
   telefone      String
   email         String?
+  nascimento    DateTime? @db.Date
+  convenio      String?   @db.VarChar(120)
   revisao       Int      @default(1)
   criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm  DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)

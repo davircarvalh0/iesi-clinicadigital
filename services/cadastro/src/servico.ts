@@ -7,6 +7,17 @@ export class ErroCadastro extends Error {
   constructor(public status: number, mensagem: string) { super(mensagem); }
 }
 
+const camposLista = {
+  id: true, cpf: true, nome: true, telefone: true, email: true, revisao: true,
+} as const;
+
+const camposDetalhe = { ...camposLista, nascimento: true, convenio: true } as const;
+type PacienteDetalhe = Prisma.PacienteGetPayload<{ select: typeof camposDetalhe }>;
+
+function apresentarDetalhe({ id, cpf, nome, telefone, email, revisao, nascimento, convenio }: PacienteDetalhe) {
+  return { id, cpf, nome, telefone, email, revisao, nascimento: nascimento?.toISOString().slice(0, 10) ?? null, convenio };
+}
+
 async function enfileirar(tx: Prisma.TransactionClient, paciente: Paciente, correlacao: string) {
   const evento = criarEnvelope({
     tipo: 'paciente.atualizado', origem: 'cadastro', id_correlacao: correlacao,
@@ -28,7 +39,7 @@ export async function listar(entrada: unknown) {
     : { nome: { contains: busca, mode: 'insensitive' } }) : {};
   // Uma fotografia consistente para lista e contadores, independentemente da agenda.
   const [pacientes, totalFiltrado, total] = await prisma.$transaction([
-    prisma.paciente.findMany({ where, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pagina - 1) * tamanhoPagina, take: tamanhoPagina }),
+    prisma.paciente.findMany({ where, select: camposLista, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pagina - 1) * tamanhoPagina, take: tamanhoPagina }),
     prisma.paciente.count({ where }), prisma.paciente.count(),
   ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   return { pacientes, total, totalFiltrado, pagina, tamanhoPagina };
@@ -42,19 +53,41 @@ export function buscarPorCpf(entrada: unknown) {
   });
 }
 
+export async function detalhar(id: string) {
+  const paciente = await prisma.paciente.findUnique({ where: { id }, select: camposDetalhe });
+  if (!paciente) throw new ErroCadastro(404, 'Paciente não encontrado');
+  return apresentarDetalhe(paciente);
+}
+
 export async function atualizar(id: string, entrada: unknown) {
-  const { revisao, ...contato } = esquemaContato.parse(entrada);
+  const { revisao, cpf, ...contato } = esquemaContato.parse(entrada);
   return prisma.$transaction(async (tx) => {
+    if (cpf !== undefined) {
+      const atual = await tx.paciente.findUnique({ where: { id } });
+      if (!atual) throw new ErroCadastro(404, 'Paciente não encontrado');
+      if (atual.cpf !== cpf) {
+        const titular = await tx.paciente.findUnique({ where: { cpf }, select: { id: true } });
+        if (titular) throw new ErroCadastro(409, 'CPF já pertence a outro paciente.');
+        throw new ErroCadastro(400, 'O CPF do cadastro mestre não pode ser alterado.');
+      }
+      if (Object.keys(contato).length === 0) {
+        if (atual.revisao !== revisao) throw erroDeRevisao();
+        return apresentarDetalhe(atual);
+      }
+    }
     const alteracao = await tx.paciente.updateMany({ where: { id, revisao }, data: { ...contato, revisao: { increment: 1 } } });
     if (!alteracao.count) {
       const existe = await tx.paciente.findUnique({ where: { id } });
-      throw new ErroCadastro(existe ? 409 : 404, existe
-        ? 'Cadastro alterado por outra pessoa. Recarregue antes de salvar.' : 'Paciente não encontrado');
+      throw existe ? erroDeRevisao() : new ErroCadastro(404, 'Paciente não encontrado');
     }
     const paciente = await tx.paciente.findUniqueOrThrow({ where: { id } });
     await enfileirar(tx, paciente, `paciente-${id}`);
-    return paciente;
+    return apresentarDetalhe(paciente);
   });
+}
+
+function erroDeRevisao() {
+  return new ErroCadastro(409, 'Cadastro alterado por outra pessoa. Recarregue antes de salvar.');
 }
 
 export async function receberAgendamento(entrada: unknown) {

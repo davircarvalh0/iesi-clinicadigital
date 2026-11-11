@@ -11,14 +11,19 @@ export const esquemaBusca = z.object({
   tamanhoPagina: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-// Identidade (nome/CPF) não pode ser alterada pela edição de contatos.
 export const esquemaContato = z.object({
   telefone: z.string().transform((v) => v.replace(/\D/g, ''))
-    .refine((v) => /^(?:55)?[1-9]\d{9,10}$/.test(v), 'Informe DDD e telefone válidos'),
-  email: z.union([z.email().max(254), z.literal(''), z.null()])
-    .transform((v) => v || null),
+    .refine((v) => /^(?:55)?[1-9]\d{9,10}$/.test(v), 'Informe DDD e telefone válidos').optional(),
+  email: z.union([z.string().trim().pipe(z.email().max(254)), z.literal(''), z.null()])
+    .transform((v) => v || null).optional(),
+  nascimento: z.iso.date()
+    .refine((v) => v <= new Date().toISOString().slice(0, 10))
+    .transform((v) => new Date(`${v}T00:00:00.000Z`)).nullable().optional(),
+  convenio: z.string().trim().max(120).nullable().transform((v) => v || null).optional(),
+  // Permite conferir o CPF, sem escrever nele.
+  cpf: cpfNormalizado.optional(),
   revisao: z.number().int().positive(),
-}).strict();
+}).strict().refine(({ revisao: _revisao, ...campos }) => Object.values(campos).some((v) => v !== undefined));
 
 export const esquemaPacienteAgendado = z.object({
   id_evento: z.string().min(1),
