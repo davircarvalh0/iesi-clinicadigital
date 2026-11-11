@@ -1,4 +1,6 @@
 # Sobe tudo com: docker compose up --build
+name: iesi-clinicadigital
+
 services:
   rabbitmq:
     image: rabbitmq:4-management-alpine
