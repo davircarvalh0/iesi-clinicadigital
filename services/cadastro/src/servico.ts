@@ -63,9 +63,11 @@ export async function receberAgendamento(entrada: unknown) {
     const registro = await tx.eventoProcessado.createMany({ data: { idEvento: evento.id_evento, tipo: evento.tipo }, skipDuplicates: true });
     if (!registro.count) return;
     const dados = evento.payload.paciente;
-    // Não sobrescreve o contato mestre com uma cópia antiga de uma consulta.
-    const paciente = await tx.paciente.upsert({ where: { cpf: dados.cpf }, create: dados, update: {} });
+    // O índice único arbitra criações concorrentes (INSERT ... ON CONFLICT DO NOTHING).
+    // A leitura seguinte recupera o vencedor sem sobrescrever o contato mestre.
+    await tx.paciente.createMany({ data: dados, skipDuplicates: true });
+    const paciente = await tx.paciente.findUniqueOrThrow({ where: { cpf: dados.cpf } });
     // Também sincroniza uma nova consulta de paciente já cadastrado.
     await enfileirar(tx, paciente, evento.id_correlacao);
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
 }
