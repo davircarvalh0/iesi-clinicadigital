@@ -7,6 +7,17 @@ export class ErroCadastro extends Error {
   constructor(public status: number, mensagem: string) { super(mensagem); }
 }
 
+const camposLista = {
+  id: true, cpf: true, nome: true, telefone: true, email: true, revisao: true,
+} as const;
+
+const camposDetalhe = { ...camposLista, nascimento: true, convenio: true } as const;
+type PacienteDetalhe = Prisma.PacienteGetPayload<{ select: typeof camposDetalhe }>;
+
+function apresentarDetalhe({ id, cpf, nome, telefone, email, revisao, nascimento, convenio }: PacienteDetalhe) {
+  return { id, cpf, nome, telefone, email, revisao, nascimento: nascimento?.toISOString().slice(0, 10) ?? null, convenio };
+}
+
 async function enfileirar(tx: Prisma.TransactionClient, paciente: Paciente, correlacao: string) {
   const evento = criarEnvelope({
     tipo: 'paciente.atualizado', origem: 'cadastro', id_correlacao: correlacao,
@@ -28,7 +39,7 @@ export async function listar(entrada: unknown) {
     : { nome: { contains: busca, mode: 'insensitive' } }) : {};
   // Uma fotografia consistente para lista e contadores, independentemente da agenda.
   const [pacientes, totalFiltrado, total] = await prisma.$transaction([
-    prisma.paciente.findMany({ where, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pagina - 1) * tamanhoPagina, take: tamanhoPagina }),
+    prisma.paciente.findMany({ where, select: camposLista, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pagina - 1) * tamanhoPagina, take: tamanhoPagina }),
     prisma.paciente.count({ where }), prisma.paciente.count(),
   ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   return { pacientes, total, totalFiltrado, pagina, tamanhoPagina };
@@ -40,6 +51,12 @@ export function buscarPorCpf(entrada: unknown) {
     where: { cpf },
     select: { id: true, cpf: true, nome: true, telefone: true },
   });
+}
+
+export async function detalhar(id: string) {
+  const paciente = await prisma.paciente.findUnique({ where: { id }, select: camposDetalhe });
+  if (!paciente) throw new ErroCadastro(404, 'Paciente não encontrado');
+  return apresentarDetalhe(paciente);
 }
 
 export async function atualizar(id: string, entrada: unknown) {
@@ -55,7 +72,7 @@ export async function atualizar(id: string, entrada: unknown) {
       }
       if (Object.keys(contato).length === 0) {
         if (atual.revisao !== revisao) throw erroDeRevisao();
-        return atual;
+        return apresentarDetalhe(atual);
       }
     }
     const alteracao = await tx.paciente.updateMany({ where: { id, revisao }, data: { ...contato, revisao: { increment: 1 } } });
@@ -65,7 +82,7 @@ export async function atualizar(id: string, entrada: unknown) {
     }
     const paciente = await tx.paciente.findUniqueOrThrow({ where: { id } });
     await enfileirar(tx, paciente, `paciente-${id}`);
-    return paciente;
+    return apresentarDetalhe(paciente);
   });
 }
 
