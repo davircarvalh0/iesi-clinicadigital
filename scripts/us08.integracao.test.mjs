@@ -127,7 +127,8 @@ test('US-08: CPF novo converge; CPF existente reaproveita os dados e o ID mestre
 
 test('US-08: Cadastro parado, consulta pendente e recuperação pela fila', { timeout: 120000 }, async () => {
   // Afeta apenas o Cadastro do projeto Compose isolado de demonstração.
-  const compose = (acao) => executar('docker', ['compose', '-p', 'iesi-us08', acao, 'cadastro']);
+  const projeto = process.env.COMPOSE_PROJECT_NAME ?? 'iesi-clinicadigital-us08-teste';
+  const compose = (acao) => executar('docker', ['compose', '-p', projeto, acao, 'cadastro']);
   const cpf = cpfFicticio();
   assert.deepEqual(await buscar(cpf), { status: 200, dados: { paciente: null } });
   let consulta;

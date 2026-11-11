@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-export const esquemaBuscaCpf = z.object({
-  cpf: z.string().trim().regex(/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
-    .transform((cpf) => cpf.replace(/\D/g, '')),
-}).strict();
+const cpfNormalizado = z.string().trim().regex(/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
+  .transform((cpf) => cpf.replace(/\D/g, ''));
+
+export const esquemaBuscaCpf = z.object({ cpf: cpfNormalizado }).strict();
 
 export const esquemaBusca = z.object({
   busca: z.string().trim().max(120).default(''),
@@ -30,7 +30,7 @@ export const esquemaPacienteAgendado = z.object({
   payload: z.object({
     id_consulta: z.string().min(1),
     paciente: z.object({
-      cpf: z.string().regex(/^\d{11}$/),
+      cpf: cpfNormalizado,
       nome: z.string().trim().min(3),
       telefone: z.string().regex(/^\d{10,13}$/),
     }),

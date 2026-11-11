@@ -9,6 +9,8 @@ cp .env.example .env        # ajuste CANAL_ENVIO, WHATSAPP_* e LEMBRETE_ANTECEDE
 docker compose up --build
 ```
 
+O projeto aparece como `iesi-clinicadigital` no Docker Desktop. Use o comando acima sem `-p` para a execução padrão da equipe. Nomes alternativos são úteis para ambientes isolados de teste.
+
 | O quê | Onde |
 | --- | --- |
 | Tela da recepção | http://localhost:8080 |
