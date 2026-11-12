@@ -3,7 +3,7 @@ import {
   BINDING_PACIENTE, ehPacienteAtualizado, EXCHANGE_ERROS, EXCHANGE_EVENTOS,
   FILA_AGENDAMENTO, FILA_AGENDAMENTO_ERROS,
 } from '@clinica/eventos';
-import { confirmarVinculoPaciente } from '../consultas/vinculo-paciente';
+import { aplicarPacienteAtualizado } from '../consultas/vinculo-paciente';
 
 export async function iniciarConsumidorPacientes(canal: ConfirmChannel): Promise<void> {
   await canal.assertExchange(EXCHANGE_EVENTOS, 'topic', { durable: true });
@@ -38,7 +38,7 @@ async function consumir(canal: ConfirmChannel, msg: ConsumeMessage): Promise<voi
   }
 
   try {
-    await confirmarVinculoPaciente(evento);
+    await aplicarPacienteAtualizado(evento);
     canal.ack(msg);
   } catch {
     const tentativa = Number(msg.properties.headers?.['x-tentativas'] ?? 0) + 1;

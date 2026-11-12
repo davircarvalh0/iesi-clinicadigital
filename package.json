@@ -14,6 +14,7 @@
     "test:integracao": "node --test scripts/us07.integracao.test.mjs",
     "test:us01:reinicio": "node --test scripts/us01.reinicio.test.mjs",
     "test:us08": "node --test scripts/us08.integracao.test.mjs",
+    "test:us03": "node --test scripts/us03.integracao.test.mjs",
     "dev:agendamento": "npm run dev -w @clinica/agendamento",
     "dev:notificacao": "npm run dev -w @clinica/notificacao",
     "dev:cadastro": "npm run dev -w @clinica/cadastro",
