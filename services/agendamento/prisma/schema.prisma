@@ -20,6 +20,7 @@ model Consulta {
   pacienteNome     String         @map("paciente_nome")
   pacienteCpf      String         @map("paciente_cpf")
   pacienteTelefone String         @map("paciente_telefone")
+  pacienteRevisao  Int?           @map("paciente_revisao")
   profissional     String
   especialidade    String
   inicio           DateTime       @db.Timestamptz(3)
