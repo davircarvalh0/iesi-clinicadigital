@@ -1,7 +1,7 @@
 import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import {
-  BINDING_PACIENTE, ehPacienteAtualizado, EXCHANGE_ERROS, EXCHANGE_EVENTOS,
-  FILA_AGENDAMENTO, FILA_AGENDAMENTO_ERROS,
+  BINDING_PACIENTE, EXCHANGE_ERROS, EXCHANGE_EVENTOS,
+  FILA_AGENDAMENTO, FILA_AGENDAMENTO_ERROS, validarPacienteAtualizado,
 } from '@clinica/eventos';
 import { aplicarPacienteAtualizado } from '../consultas/vinculo-paciente';
 
@@ -30,12 +30,12 @@ function lerEvento(msg: ConsumeMessage): unknown {
 }
 
 async function consumir(canal: ConfirmChannel, msg: ConsumeMessage): Promise<void> {
-  const evento = lerEvento(msg);
-  if (!ehPacienteAtualizado(evento)) {
-    console.warn('[agendamento] evento de paciente inválido');
-    canal.nack(msg, false, false);
+  const leitura = validarPacienteAtualizado(lerEvento(msg));
+  if (!leitura.ok) {
+    await recusar(canal, msg, leitura.motivo);
     return;
   }
+  const evento = leitura.evento;
 
   try {
     await aplicarPacienteAtualizado(evento);
@@ -58,5 +58,20 @@ async function consumir(canal: ConfirmChannel, msg: ConsumeMessage): Promise<voi
     } catch {
       canal.nack(msg, false, true);
     }
+  }
+}
+
+// Envia direto para a fila de erros deste serviço: a exchange de erros é fanout e copiaria para todas.
+async function recusar(canal: ConfirmChannel, msg: ConsumeMessage, motivo: string): Promise<void> {
+  console.warn(`[agendamento] evento de paciente recusado: ${motivo}`);
+  try {
+    await new Promise<void>((resolve, reject) => canal.sendToQueue(FILA_AGENDAMENTO_ERROS, msg.content, {
+      ...msg.properties,
+      persistent: true,
+      headers: { ...msg.properties.headers, 'x-motivo': motivo },
+    }, (erro) => erro ? reject(erro) : resolve()));
+    canal.ack(msg);
+  } catch {
+    canal.nack(msg, false, true);
   }
 }

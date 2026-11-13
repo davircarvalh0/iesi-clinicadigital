@@ -1,10 +1,14 @@
 import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
-import { ehEventoConsulta, ehPacienteAtualizado, FILA_NOTIFICACAO, type EventoConsulta, type PacienteAtualizado } from '@clinica/eventos';
+import {
+  FILA_NOTIFICACAO, FILA_NOTIFICACAO_ERROS, validarEventoConsulta, validarPacienteAtualizado,
+  type EventoConsulta, type PacienteAtualizado, type Validacao,
+} from '@clinica/eventos';
 import { registrarAtividade } from '../atividades/registro';
 import { prisma } from '../db';
 import { tratarEvento } from './tratadores';
 
 const HEADER_TENTATIVAS = 'x-tentativas';
+const HEADER_MOTIVO = 'x-motivo';
 
 let canal: ConfirmChannel;
 let maxTentativas = 3;
@@ -40,12 +44,12 @@ export async function estadoConsumo() {
 }
 
 async function processar(msg: ConsumeMessage): Promise<void> {
-  const evento = lerEvento(msg);
-  if (!evento) {
-    await registrarAtividade({ acao: 'evento.rejeitado', descricao: 'Mensagem inválida enviada para a fila de erros' });
-    canal.nack(msg, false, false);
+  const leitura = lerEvento(msg);
+  if (!leitura.ok) {
+    await recusar(msg, leitura.motivo);
     return;
   }
+  const evento = leitura.evento;
 
   try {
     const duplicado = await prisma.$transaction(async (tx) => {
@@ -70,12 +74,42 @@ async function processar(msg: ConsumeMessage): Promise<void> {
   }
 }
 
-function lerEvento(msg: ConsumeMessage): EventoConsulta | PacienteAtualizado | null {
+function lerEvento(msg: ConsumeMessage): Validacao<EventoConsulta | PacienteAtualizado> {
+  let valor: unknown;
   try {
-    const valor: unknown = JSON.parse(msg.content.toString());
-    return ehPacienteAtualizado(valor) || ehEventoConsulta(valor) ? valor : null;
+    valor = JSON.parse(msg.content.toString());
   } catch {
-    return null;
+    return { ok: false, motivo: 'mensagem não é JSON válido' };
+  }
+  const tipo = (valor as { tipo?: unknown } | null)?.tipo;
+  return tipo === 'paciente.atualizado' ? validarPacienteAtualizado(valor) : validarEventoConsulta(valor);
+}
+
+// Envia direto para a fila de erros deste serviço: a exchange de erros é fanout e copiaria para todas.
+async function recusar(msg: ConsumeMessage, motivo: string): Promise<void> {
+  try {
+    await new Promise<void>((resolve, reject) => canal.sendToQueue(FILA_NOTIFICACAO_ERROS, msg.content, {
+      persistent: true,
+      contentType: msg.properties.contentType,
+      messageId: msg.properties.messageId,
+      type: msg.properties.type,
+      headers: { ...msg.properties.headers, [HEADER_MOTIVO]: motivo },
+    }, (erro) => erro ? reject(erro) : resolve()));
+    canal.ack(msg);
+  } catch {
+    canal.nack(msg, false, true);
+    return;
+  }
+  const idEvento = lerIdEvento(msg);
+  await registrarAtividade({ acao: 'evento.rejeitado', descricao: `Evento recusado: ${motivo}`, idEvento }).catch(() => {});
+}
+
+function lerIdEvento(msg: ConsumeMessage): string | undefined {
+  try {
+    const id = (JSON.parse(msg.content.toString()) as { id_evento?: unknown }).id_evento;
+    return typeof id === 'string' && id ? id : undefined;
+  } catch {
+    return undefined;
   }
 }
 
