@@ -85,23 +85,41 @@ function lerEvento(msg: ConsumeMessage): Validacao<EventoConsulta | PacienteAtua
   return tipo === 'paciente.atualizado' ? validarPacienteAtualizado(valor) : validarEventoConsulta(valor);
 }
 
-// Envia direto para a fila de erros deste serviço: a exchange de erros é fanout e copiaria para todas.
 async function recusar(msg: ConsumeMessage, motivo: string): Promise<void> {
+  if (!(await enviarParaErros(msg, motivo))) return;
+  await registrarAtividade({ acao: 'evento.rejeitado', descricao: `Evento recusado: ${motivo}`, idEvento: lerIdEvento(msg) }).catch(() => {});
+}
+
+// Envia direto para a fila de erros deste serviço: a exchange de erros é fanout e copiaria para todas.
+// A original só recebe ack depois da confirmação do broker; se a cópia falhar, ela volta para a fila.
+async function enviarParaErros(msg: ConsumeMessage, motivo: string, tentativas?: number): Promise<boolean> {
   try {
     await new Promise<void>((resolve, reject) => canal.sendToQueue(FILA_NOTIFICACAO_ERROS, msg.content, {
       persistent: true,
       contentType: msg.properties.contentType,
       messageId: msg.properties.messageId,
       type: msg.properties.type,
-      headers: { ...msg.properties.headers, [HEADER_MOTIVO]: motivo },
+      headers: {
+        ...msg.properties.headers,
+        [HEADER_MOTIVO]: motivo,
+        ...(tentativas === undefined ? {} : { [HEADER_TENTATIVAS]: tentativas }),
+      },
     }, (erro) => erro ? reject(erro) : resolve()));
     canal.ack(msg);
+    return true;
   } catch {
-    canal.nack(msg, false, true);
-    return;
+    devolverParaFila(msg);
+    return false;
   }
-  const idEvento = lerIdEvento(msg);
-  await registrarAtividade({ acao: 'evento.rejeitado', descricao: `Evento recusado: ${motivo}`, idEvento }).catch(() => {});
+}
+
+// Com o canal fechado não há como dar nack; a mensagem volta sozinha quando a conexão cai.
+function devolverParaFila(msg: ConsumeMessage): void {
+  try {
+    canal.nack(msg, false, true);
+  } catch {
+    console.error('[consumidor] canal fechado; a mensagem será reentregue pelo broker');
+  }
 }
 
 function lerIdEvento(msg: ConsumeMessage): string | undefined {
@@ -114,7 +132,7 @@ function lerIdEvento(msg: ConsumeMessage): string | undefined {
 }
 
 /** Tenta de novo republicando na própria fila; esgotadas as tentativas, manda para a fila de erros. */
-async function tratarFalha(msg: ConsumeMessage, evento: EventoConsulta | PacienteAtualizado, _erro: unknown): Promise<void> {
+async function tratarFalha(msg: ConsumeMessage, evento: EventoConsulta | PacienteAtualizado, erro: unknown): Promise<void> {
   const tentativa = Number(msg.properties.headers?.[HEADER_TENTATIVAS] ?? 0) + 1;
   const base = { idEvento: evento.id_evento, idConsulta: evento.tipo === 'paciente.atualizado' ? undefined : evento.payload.id_consulta };
   console.error(`[consumidor] falha ao processar ${evento.id_evento} (tentativa ${tentativa})`);
@@ -130,10 +148,18 @@ async function tratarFalha(msg: ConsumeMessage, evento: EventoConsulta | Pacient
         headers: { ...msg.properties.headers, [HEADER_TENTATIVAS]: tentativa },
       }, (erro) => erro ? reject(erro) : resolve()));
       canal.ack(msg);
-    } catch { canal.nack(msg, false, true); return; }
+    } catch { devolverParaFila(msg); return; }
     await registrarAtividade({ ...base, acao: 'evento.nova_tentativa', descricao: `${evento.tipo}: nova tentativa ${tentativa + 1}/${maxTentativas}` }).catch(() => {});
   } else {
-    canal.nack(msg, false, false);
-    await registrarAtividade({ ...base, acao: 'evento.rejeitado', descricao: `${evento.tipo} enviado para a fila de erros após ${tentativa} tentativas` }).catch(() => {});
+    const motivo = motivoFalha(erro, tentativa);
+    if (!(await enviarParaErros(msg, motivo, tentativa))) return;
+    await registrarAtividade({ ...base, acao: 'evento.rejeitado', descricao: `${evento.tipo}: ${motivo}` }).catch(() => {});
   }
+}
+
+// Só o código do erro: a mensagem pode conter dados do evento.
+function motivoFalha(erro: unknown, tentativas: number): string {
+  const { code, errorCode } = (erro ?? {}) as { code?: unknown; errorCode?: unknown };
+  const codigo = code ?? errorCode;
+  return `falha no processamento após ${tentativas} tentativas${typeof codigo === 'string' ? ` (${codigo})` : ''}`;
 }

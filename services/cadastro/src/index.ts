@@ -1,9 +1,46 @@
-import amqp, { type ConfirmChannel } from 'amqplib';
+import amqp, { type ConfirmChannel, type ConsumeMessage } from 'amqplib';
 import { EXCHANGE_EVENTOS, EXCHANGE_ERROS, FILA_CADASTRO, FILA_CADASTRO_ERROS, BINDING_CADASTRO } from '@clinica/eventos';
 import { ZodError } from 'zod';
 import { criarApp } from './app';
 import { prisma } from './db';
 import { receberAgendamento } from './servico';
+
+const MAX_TENTATIVAS = 3;
+
+// Envia direto para a fila de erros deste serviço: a exchange de erros é fanout e copiaria para todas.
+// A original só recebe ack depois da confirmação do broker; se a cópia falhar, ela volta para a fila.
+async function enviarParaErros(canal: ConfirmChannel, msg: ConsumeMessage, motivo: string, tentativas?: number) {
+  try {
+    await new Promise<void>((resolve, reject) => canal.sendToQueue(FILA_CADASTRO_ERROS, msg.content, {
+      ...msg.properties,
+      persistent: true,
+      headers: {
+        ...msg.properties.headers,
+        'x-motivo': motivo,
+        ...(tentativas === undefined ? {} : { 'x-tentativas': tentativas }),
+      },
+    }, (erro) => erro ? reject(erro) : resolve()));
+    canal.ack(msg);
+  } catch {
+    devolverParaFila(canal, msg);
+  }
+}
+
+// Com o canal fechado não há como dar nack; a mensagem volta sozinha quando a conexão cai.
+function devolverParaFila(canal: ConfirmChannel, msg: ConsumeMessage) {
+  try {
+    canal.nack(msg, false, true);
+  } catch {
+    console.error('[cadastro] canal fechado; a mensagem será reentregue pelo broker');
+  }
+}
+
+// Só o código do erro: a mensagem pode conter dados do evento.
+function motivoFalha(erro: unknown, tentativas: number): string {
+  const { code, errorCode } = (erro ?? {}) as { code?: unknown; errorCode?: unknown };
+  const codigo = code ?? errorCode;
+  return `falha no processamento após ${tentativas} tentativas${typeof codigo === 'string' ? ` (${codigo})` : ''}`;
+}
 
 async function publicar(canal: ConfirmChannel) {
   const eventos = await prisma.eventoSaida.findMany({ where: { publicadoEm: null }, orderBy: { criadoEm: 'asc' }, take: 50 });
@@ -42,8 +79,11 @@ async function main() {
       consumo.ack(msg);
     } catch (erro) {
       const tentativa = Number(msg.properties.headers?.['x-tentativas'] ?? 0) + 1;
-      if (erro instanceof ZodError || erro instanceof SyntaxError || tentativa >= 3) {
-        consumo.nack(msg, false, false);
+      console.error('[cadastro] evento não processado; sem dados pessoais no log');
+      if (erro instanceof ZodError || erro instanceof SyntaxError) {
+        await enviarParaErros(consumo, msg, 'evento de agendamento inválido');
+      } else if (tentativa >= MAX_TENTATIVAS) {
+        await enviarParaErros(consumo, msg, motivoFalha(erro, tentativa), tentativa);
       } else {
         await new Promise((r) => setTimeout(r, 1000 * tentativa));
         try {
@@ -51,9 +91,8 @@ async function main() {
             ...msg.properties, persistent: true, headers: { ...msg.properties.headers, 'x-tentativas': tentativa },
           }, (erro) => erro ? reject(erro) : resolve()));
           consumo.ack(msg);
-        } catch { consumo.nack(msg, false, true); }
+        } catch { devolverParaFila(consumo, msg); }
       }
-      console.error('[cadastro] evento não processado; sem dados pessoais no log');
     }
   });
   let publicando = false;
