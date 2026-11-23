@@ -73,7 +73,13 @@ test('US-10: remarcação recalcula pela nova data e a rotina descarta pendênci
       where: { idConsulta: id }, data: { inicioConsulta: new Date(Date.now() - 1000), enviarEm: new Date(0) },
     });
     let disparos = 0;
-    parar = iniciarRotinaEnvio({ nome: 'log', async enviar() { disparos++; return {}; } }, 10, 1);
+    parar = iniciarRotinaEnvio({
+      nome: 'log',
+      async enviar() {
+        disparos++;
+        return { status: 'simulado', modoEnvio: 'simulado', canalEnvio: 'log', idExterno: null };
+      },
+    }, 10, 1);
     const limite = Date.now() + 5000;
     let lembrete = await consultar();
     while (lembrete.status === 'programado' && Date.now() < limite) {

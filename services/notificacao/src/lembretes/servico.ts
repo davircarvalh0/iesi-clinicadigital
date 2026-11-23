@@ -37,6 +37,9 @@ async function salvarProgramacao(
     tentativas: 0,
     motivoFalha: expirado ? MOTIVO_CONSULTA_INICIADA : null,
     enviadoEm: null,
+    modoEnvio: null,
+    canalEnvio: null,
+    idExterno: null,
   };
   await tx.lembrete.upsert({
     where: { idConsulta: payload.id_consulta },

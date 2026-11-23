@@ -11,8 +11,20 @@ datasource db {
 enum StatusLembrete {
   programado
   enviado
+  simulado
+  aceito_provedor
   falhou
   cancelado
+}
+
+enum ModoEnvio {
+  simulado
+  real
+}
+
+enum CanalLembrete {
+  log
+  whatsapp
 }
 
 /// Cópia local dos dados de contato necessários ao envio (vindos do evento, sem conteúdo clínico).
@@ -32,6 +44,9 @@ model Lembrete {
   tentativas          Int            @default(0)
   motivoFalha         String?        @map("motivo_falha")
   enviadoEm           DateTime?      @map("enviado_em") @db.Timestamptz(3)
+  modoEnvio           ModoEnvio?     @map("modo_envio")
+  canalEnvio          CanalLembrete? @map("canal_envio")
+  idExterno           String?        @map("id_externo")
   criadoEm            DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
