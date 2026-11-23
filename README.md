@@ -27,7 +27,7 @@ npm run demo:popular
 
 ### Roteiro da demonstração
 
-- **Caminho feliz:** "Nova consulta" → o feed mostra *Evento publicado* (Agendamento) e *Lembrete programado* (Notificação); no horário, *Lembrete enviado*.
+- **Caminho feliz:** "Nova consulta" → o feed mostra *Evento publicado* (Agendamento) e *Lembrete programado* (Notificação). No horário, aparece *Envio simulado* no canal log ou *Aceito pelo WhatsApp* quando o provedor retorna um identificador.
 - **Cancelar / Remarcar:** o selo do lembrete muda sozinho para *cancelado* ou é reprogramado.
 - **Notificação fora do ar:** desligue o interruptor do "Modo demonstração", faça alterações (o contador de eventos na fila sobe) e religue: a fila é processada. Também funciona com `docker compose stop notificacao`.
 - **Evento duplicado:** "Reenviar último evento" publica de novo o mesmo `id_evento`; o feed mostra *Evento duplicado ignorado*.
@@ -108,3 +108,12 @@ dados manualmente. Se o Cadastro estiver indisponível, é possível tentar nova
 com dados manuais. A agenda mostra o vínculo pendente até receber a confirmação por evento.
 
 O contrato e o roteiro de validação em um Compose isolado estão em [docs/US-08.md](docs/US-08.md).
+
+## Lembretes da recepção (US-10 e US-12)
+
+O modo normal programa lembretes 24 horas antes da consulta, com exibição em `America/Recife`.
+Para uma demonstração, configure `LEMBRETE_ANTECEDENCIA_MINUTOS=1` e `CANAL_ENVIO=log`.
+Quando a antecedência já passou, uma consulta futura pode receber o lembrete no próximo ciclo.
+Consultas iniciadas têm o lembrete descartado com o motivo registrado.
+
+Consulte a [política de antecedência](docs/US-10.md) e o [contrato dos resultados de envio](docs/US-12.md).
