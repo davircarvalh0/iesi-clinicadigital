@@ -41,7 +41,7 @@ export async function programar(tx: Prisma.TransactionClient, payload: PayloadCo
   await registrarAtividade(
     {
       acao: 'lembrete.programado',
-      descricao: `${payload.paciente.nome}: lembrete programado para ${dataHora(lembrete.enviarEm)}`,
+      descricao: `lembrete programado para ${dataHora(lembrete.enviarEm)}`,
       idEvento,
       idConsulta: payload.id_consulta,
     },
@@ -72,7 +72,7 @@ export async function reprogramar(tx: Prisma.TransactionClient, payload: Payload
   await registrarAtividade(
     {
       acao: 'lembrete.reprogramado',
-      descricao: `${payload.paciente.nome}: lembrete reprogramado para ${dataHora(lembrete.enviarEm)}`,
+      descricao: `lembrete reprogramado para ${dataHora(lembrete.enviarEm)}`,
       idEvento,
       idConsulta: payload.id_consulta,
     },
@@ -89,8 +89,8 @@ export async function cancelar(tx: Prisma.TransactionClient, payload: PayloadCon
     {
       acao: 'lembrete.cancelado',
       descricao: count
-        ? `${payload.paciente.nome}: lembrete cancelado`
-        : `${payload.paciente.nome}: consulta cancelada, mas o lembrete já tinha sido enviado`,
+        ? 'lembrete cancelado'
+        : 'consulta cancelada, mas o lembrete já tinha sido enviado',
       idEvento,
       idConsulta: payload.id_consulta,
     },

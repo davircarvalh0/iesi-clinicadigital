@@ -1,5 +1,5 @@
 import type { Lembrete } from '../../generated/prisma';
-import { registrarAtividade } from '../atividades/registro';
+import { mascararDados, registrarAtividade } from '../atividades/registro';
 import type { CanalEnvio } from '../canais';
 import { paraFormatoInternacional } from '../canais/telefone';
 import { prisma } from '../db';
@@ -14,7 +14,7 @@ export function iniciarRotinaEnvio(canal: CanalEnvio, intervaloMs: number, maxTe
     try {
       await enviarVencidos(canal, maxTentativas);
     } catch (erro) {
-      console.error('[rotina-envio] falha no ciclo', erro);
+      console.error('[rotina-envio] falha no ciclo', codigoErro(erro));
     } finally {
       rodando = false;
     }
@@ -58,16 +58,16 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
       await registrarAtividade({
         ...base,
         acao: 'lembrete.enviado',
-        descricao: `${lembrete.pacienteNome}: lembrete enviado por ${canal.nome === 'whatsapp' ? 'WhatsApp' : 'log (simulado)'} para +${telefone}`,
+        descricao: `lembrete enviado por ${canal.nome === 'whatsapp' ? 'WhatsApp' : 'log (simulado)'}`,
       });
       return;
     } catch (erro) {
-      ultimoErro = erro instanceof Error ? erro.message : String(erro);
+      ultimoErro = mascararDados(erro instanceof Error ? erro.message : String(erro));
       if (tentativa < maxTentativas) {
         await registrarAtividade({
           ...base,
           acao: 'envio.nova_tentativa',
-          descricao: `${lembrete.pacienteNome}: envio falhou (${ultimoErro}); tentando de novo`,
+          descricao: `envio falhou (${ultimoErro}); tentando de novo`,
         });
         await new Promise((r) => setTimeout(r, 1000 * tentativa));
       }
@@ -81,6 +81,13 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
   await registrarAtividade({
     ...base,
     acao: 'lembrete.falhou',
-    descricao: `${lembrete.pacienteNome}: lembrete falhou após ${maxTentativas} tentativas (${ultimoErro})`,
+    descricao: `lembrete falhou após ${maxTentativas} tentativas (${ultimoErro})`,
   });
+}
+
+// Só o código: a mensagem de erro do banco pode conter dados do lembrete.
+function codigoErro(erro: unknown): string {
+  const { code, errorCode } = (erro ?? {}) as { code?: unknown; errorCode?: unknown };
+  const codigo = code ?? errorCode;
+  return typeof codigo === 'string' ? codigo : 'sem código';
 }

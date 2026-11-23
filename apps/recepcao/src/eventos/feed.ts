@@ -43,15 +43,23 @@ export function montarFeed(eventos: EventoPublicado[], atividades: Atividade[]):
     tom: e.duplicado ? 'alerta' : 'info',
   }));
 
+  // A Notificação não guarda nomes nas atividades; o nome vem da agenda, que a recepção já vê.
+  const nomes = new Map(eventos.map((e) => [e.idConsulta, e.pacienteNome]));
   const daNotificacao = atividades.map<ItemFeed>((a) => ({
     id: `no-${a.id}`,
     servico: 'notificacao',
     titulo: ATIVIDADES[a.acao]?.titulo ?? a.acao,
-    detalhe: a.descricao,
+    detalhe: detalheAtividade(a, nomes),
     idEvento: a.idEvento ?? undefined,
     quando: a.ocorridoEm,
     tom: ATIVIDADES[a.acao]?.tom ?? 'neutro',
   }));
 
   return [...doAgendamento, ...daNotificacao].sort((a, b) => b.quando.localeCompare(a.quando)).slice(0, 40);
+}
+
+function detalheAtividade(a: Atividade, nomes: Map<string, string>): string {
+  if (!a.idConsulta) return a.descricao;
+  const quem = nomes.get(a.idConsulta) ?? `Consulta ${a.idConsulta.slice(0, 8)}`;
+  return `${quem} · ${a.descricao}`;
 }
