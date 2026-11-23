@@ -3,6 +3,7 @@ import { registrarAtividade } from '../atividades/registro';
 import type { CanalEnvio } from '../canais';
 import { paraFormatoInternacional } from '../canais/telefone';
 import { prisma } from '../db';
+import { MOTIVO_CONSULTA_INICIADA } from '../lembretes/horario';
 
 /** Rotina periódica que envia os lembretes cujo horário chegou. Retorna uma função que a para. */
 export function iniciarRotinaEnvio(canal: CanalEnvio, intervaloMs: number, maxTentativas: number): () => void {
@@ -26,8 +27,9 @@ export function iniciarRotinaEnvio(canal: CanalEnvio, intervaloMs: number, maxTe
 }
 
 async function enviarVencidos(canal: CanalEnvio, maxTentativas: number): Promise<void> {
+  const agora = new Date();
   const vencidos = await prisma.lembrete.findMany({
-    where: { status: 'programado', enviarEm: { lte: new Date() } },
+    where: { status: 'programado', OR: [{ enviarEm: { lte: agora } }, { inicioConsulta: { lte: agora } }] },
     orderBy: { enviarEm: 'asc' },
     take: 20,
   });
@@ -37,22 +39,43 @@ async function enviarVencidos(canal: CanalEnvio, maxTentativas: number): Promise
 }
 
 async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: number): Promise<void> {
-  const telefone = paraFormatoInternacional(lembrete.telefone);
-  const base = { idConsulta: lembrete.idConsulta };
+  const programacao = {
+    id: lembrete.id,
+    status: 'programado' as const,
+    idEventoConsulta: lembrete.idEventoConsulta,
+    inicioConsulta: lembrete.inicioConsulta,
+    enviarEm: lembrete.enviarEm,
+  };
+  const base = { idConsulta: lembrete.idConsulta, idEvento: lembrete.idEventoConsulta ?? undefined };
   let ultimoErro = '';
 
   for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    const atual = await prisma.lembrete.findFirst({ where: programacao });
+    if (!atual) return;
+    if (atual.inicioConsulta.getTime() <= Date.now()) {
+      await prisma.$transaction(async (tx) => {
+        const { count } = await tx.lembrete.updateMany({
+          where: programacao,
+          data: { status: 'falhou', tentativas: tentativa - 1, motivoFalha: MOTIVO_CONSULTA_INICIADA },
+        });
+        if (count) {
+          await registrarAtividade({ ...base, acao: 'lembrete.expirado', descricao: MOTIVO_CONSULTA_INICIADA }, tx);
+        }
+      });
+      return;
+    }
+    const telefone = paraFormatoInternacional(atual.telefone);
     try {
       await canal.enviar({
         telefone,
-        pacienteNome: lembrete.pacienteNome,
-        especialidade: lembrete.especialidade,
-        profissional: lembrete.profissional,
-        inicioConsulta: lembrete.inicioConsulta,
+        pacienteNome: atual.pacienteNome,
+        especialidade: atual.especialidade,
+        profissional: atual.profissional,
+        inicioConsulta: atual.inicioConsulta,
       });
       // `status: programado` no filtro evita sobrescrever um cancelamento que chegou durante o envio.
       await prisma.lembrete.updateMany({
-        where: { id: lembrete.id, status: 'programado' },
+        where: programacao,
         data: { status: 'enviado', enviadoEm: new Date(), tentativas: tentativa, motivoFalha: null },
       });
       await registrarAtividade({
@@ -69,13 +92,13 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
           acao: 'envio.nova_tentativa',
           descricao: `${lembrete.pacienteNome}: envio falhou (${ultimoErro}); tentando de novo`,
         });
-        await new Promise((r) => setTimeout(r, 1000 * tentativa));
+        await new Promise((r) => setTimeout(r, Math.min(1000 * tentativa, 30_000)));
       }
     }
   }
 
   await prisma.lembrete.updateMany({
-    where: { id: lembrete.id, status: 'programado' },
+    where: programacao,
     data: { status: 'falhou', tentativas: maxTentativas, motivoFalha: ultimoErro },
   });
   await registrarAtividade({

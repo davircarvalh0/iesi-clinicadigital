@@ -5,6 +5,7 @@ export type Acao =
   | 'lembrete.programado'
   | 'lembrete.reprogramado'
   | 'lembrete.cancelado'
+  | 'lembrete.expirado'
   | 'lembrete.enviado'
   | 'lembrete.falhou'
   | 'envio.nova_tentativa'
@@ -24,7 +25,7 @@ export interface DadosAtividade {
 /** Registra uma atividade. Recebe a transação quando faz parte do processamento de um evento. */
 export async function registrarAtividade(dados: DadosAtividade, db: Prisma.TransactionClient = prisma) {
   await db.atividade.create({ data: dados });
-  console.log(`[atividade] ${dados.acao}: ${dados.descricao}`);
+  console.log(`[atividade] ${dados.acao}`);
 }
 
 const fmtDataHora = new Intl.DateTimeFormat('pt-BR', {
