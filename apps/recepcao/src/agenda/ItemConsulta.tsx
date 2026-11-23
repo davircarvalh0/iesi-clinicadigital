@@ -6,7 +6,9 @@ import type { Consulta, Lembrete, StatusLembrete } from '../tipos';
 
 const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
   programado: { tom: 'marca', texto: 'Lembrete programado' },
-  enviado: { tom: 'sucesso', texto: 'Lembrete enviado' },
+  enviado: { tom: 'neutro', texto: 'Resultado de envio sem classificação' },
+  simulado: { tom: 'neutro', texto: 'Envio simulado' },
+  aceito_provedor: { tom: 'sucesso', texto: 'Aceito pelo WhatsApp' },
   falhou: { tom: 'perigo', texto: 'Lembrete falhou' },
   cancelado: { tom: 'neutro', texto: 'Lembrete cancelado' },
 };
@@ -48,7 +50,7 @@ export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: 
         <div className="consulta__selos">
           <Selo tom={cancelada ? 'perigo' : 'info'}>{cancelada ? 'Cancelada' : 'Agendada'}</Selo>
           {selo ? (
-            <span title={lembrete?.motivoFalha ?? (lembrete?.status === 'programado' ? `Envio previsto para ${dataHora(lembrete.enviarEm)}` : undefined)}>
+            <span title={lembrete?.status === 'programado' && !lembrete.motivoFalha ? `Envio previsto para ${dataHora(lembrete.enviarEm)}` : undefined}>
               <Selo tom={selo.tom}>
                 {lembrete?.status === 'cancelado' ? <BellOff size={13} /> : <Bell size={13} />} {selo.texto}
               </Selo>
@@ -59,6 +61,12 @@ export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: 
             </Selo>
           )}
         </div>
+        {lembrete?.motivoFalha && (
+          <span className="consulta__detalhes">
+            {lembrete.motivoFalha}
+            {lembrete.tentativas > 0 && ` · ${lembrete.tentativas} tentativa(s)`}
+          </span>
+        )}
         {antecedencia != null && antecedencia < 1440 && (
           <Selo tom="alerta">Demonstração · antecedência de {antecedencia} min</Selo>
         )}
