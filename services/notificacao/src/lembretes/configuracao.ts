@@ -1,5 +1,5 @@
 const ANTECEDENCIA_NORMAL = 24 * 60;
-const INTERVALO_MAXIMO_MS = 2_147_483_647; // Limite de setInterval no Node.
+const INTEIRO_32_MAXIMO = 2_147_483_647; // Limite do timer no Node e do campo Int no banco.
 
 function inteiro(nome: string, valor: string | undefined, padrao: number, maximo: number): number {
   if (valor === undefined) return padrao;
@@ -17,7 +17,7 @@ export function lerConfiguracaoLembretes(env: NodeJS.ProcessEnv) {
   return {
     antecedenciaMinutos,
     modoAntecedencia: antecedenciaMinutos === ANTECEDENCIA_NORMAL ? 'normal' as const : 'demonstracao' as const,
-    rotinaEnvioIntervaloMs: inteiro('ROTINA_ENVIO_INTERVALO_MS', env.ROTINA_ENVIO_INTERVALO_MS, 5000, INTERVALO_MAXIMO_MS),
-    envioMaxTentativas: inteiro('ENVIO_MAX_TENTATIVAS', env.ENVIO_MAX_TENTATIVAS, 3, Number.MAX_SAFE_INTEGER),
+    rotinaEnvioIntervaloMs: inteiro('ROTINA_ENVIO_INTERVALO_MS', env.ROTINA_ENVIO_INTERVALO_MS, 5000, INTEIRO_32_MAXIMO),
+    envioMaxTentativas: inteiro('ENVIO_MAX_TENTATIVAS', env.ENVIO_MAX_TENTATIVAS, 3, INTEIRO_32_MAXIMO),
   };
 }

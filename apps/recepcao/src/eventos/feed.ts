@@ -19,6 +19,7 @@ export interface ItemFeed {
 const ATIVIDADES: Record<string, { titulo: string; tom: TomSelo }> = {
   'lembrete.programado': { titulo: 'Lembrete programado', tom: 'marca' },
   'lembrete.reprogramado': { titulo: 'Lembrete reprogramado', tom: 'marca' },
+  'lembrete.expirado': { titulo: 'Lembrete descartado', tom: 'neutro' },
   'lembrete.cancelado': { titulo: 'Lembrete cancelado', tom: 'neutro' },
   'lembrete.enviado': { titulo: 'Lembrete enviado', tom: 'sucesso' },
   'lembrete.falhou': { titulo: 'Lembrete falhou', tom: 'perigo' },

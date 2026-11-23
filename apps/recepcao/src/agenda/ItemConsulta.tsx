@@ -1,7 +1,7 @@
 import { Bell, BellOff, RotateCcw, X } from 'lucide-react';
 import { Selo, type TomSelo } from '../componentes/Selo';
 import { corDaEspecialidade } from '../dados/profissionais';
-import { hora, iniciais, mascaraTelefone } from '../formatacao';
+import { dataHora, hora, iniciais, mascaraTelefone } from '../formatacao';
 import type { Consulta, Lembrete, StatusLembrete } from '../tipos';
 
 const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
@@ -25,6 +25,7 @@ interface Props {
 export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: Props) {
   const cancelada = c.status === 'cancelada';
   const selo = lembrete ? SELO_LEMBRETE[lembrete.status] : null;
+  const antecedencia = lembrete?.antecedenciaMinutos;
 
   return (
     <article className={`consulta ${cancelada ? 'consulta--cancelada' : ''}`}>
@@ -47,7 +48,7 @@ export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: 
         <div className="consulta__selos">
           <Selo tom={cancelada ? 'perigo' : 'info'}>{cancelada ? 'Cancelada' : 'Agendada'}</Selo>
           {selo ? (
-            <span title={lembrete?.motivoFalha ?? undefined}>
+            <span title={lembrete?.motivoFalha ?? (lembrete?.status === 'programado' ? `Envio previsto para ${dataHora(lembrete.enviarEm)}` : undefined)}>
               <Selo tom={selo.tom}>
                 {lembrete?.status === 'cancelado' ? <BellOff size={13} /> : <Bell size={13} />} {selo.texto}
               </Selo>
@@ -58,6 +59,9 @@ export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: 
             </Selo>
           )}
         </div>
+        {antecedencia != null && antecedencia < 1440 && (
+          <Selo tom="alerta">Demonstração · antecedência de {antecedencia} min</Selo>
+        )}
         {c.vinculoPacientePendente && <Selo tom="alerta">Vínculo com Cadastro pendente</Selo>}
         {!cancelada && (
           <div className="consulta__acoes">

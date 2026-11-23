@@ -21,6 +21,7 @@ export interface Lembrete {
   idConsulta: string;
   status: StatusLembrete;
   enviarEm: string;
+  antecedenciaMinutos: number | null;
   enviadoEm: string | null;
   motivoFalha: string | null;
 }
