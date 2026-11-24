@@ -94,7 +94,7 @@ test('US-16: atividades, painel e logs não expõem nome, CPF nem telefone (CA1,
   // Consulta próxima: com antecedência padrão de 24h, o lembrete é enviado no próximo ciclo.
   const enviada = await agendar(emHoras(1));
 
-  await aguardar(() => lembrete(enviada), (l) => l?.status === 'enviado', 'lembrete enviado');
+  await aguardar(() => lembrete(enviada), (l) => l?.status === 'simulado', 'lembrete enviado (simulado em log, US-12)');
   await aguardar(() => lembrete(cancelada), (l) => l?.status === 'programado', 'lembrete programado');
   assert.equal((await api(`agendamento/consultas/${cancelada}`, { method: 'PATCH', body: { inicio: emHoras(24 * 8) } })).status, 200);
   await aguardar(
@@ -109,7 +109,7 @@ test('US-16: atividades, painel e logs não expõem nome, CPF nem telefone (CA1,
   const { dados: atividades } = await api('notificacao/atividades?limite=100');
   const minhas = atividades.filter((a) => [enviada, cancelada].includes(a.idConsulta));
   const acoes = new Set(minhas.map((a) => a.acao));
-  for (const acao of ['lembrete.programado', 'lembrete.enviado', 'lembrete.reprogramado', 'lembrete.cancelado']) {
+  for (const acao of ['lembrete.programado', 'lembrete.simulado', 'lembrete.reprogramado', 'lembrete.cancelado']) {
     assert.ok(acoes.has(acao), `atividade ${acao} registrada`);
   }
   semSentinelas(JSON.stringify(minhas), 'Atividades da Notificação');
@@ -129,6 +129,6 @@ test('US-16: atividades, painel e logs não expõem nome, CPF nem telefone (CA1,
     ['compose', '-p', projeto, 'logs', '--no-color', '--since', inicioDoTeste, 'agendamento', 'notificacao', 'cadastro'],
     { maxBuffer: 20 * 1024 * 1024 },
   );
-  assert.ok(stdout.includes('[atividade] lembrete.enviado'), 'logs da Notificação foram lidos');
+  assert.ok(stdout.includes('[atividade] lembrete.simulado'), 'logs da Notificação foram lidos');
   semSentinelas(stdout, 'Logs dos serviços');
 });
