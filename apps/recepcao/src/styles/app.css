@@ -233,7 +233,41 @@ button.chip:hover { filter: brightness(0.96); }
 .dialogo-contato { border: 0; padding: 0; border-radius: 20px; width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 32px); color: var(--texto); }
 .dialogo-contato::backdrop { background: rgba(26, 48, 46, 0.32); backdrop-filter: blur(6px); }
 .dialogo-contato .modal { width: 100%; }
+.dialogo-contato { overflow-y: auto; }
+
+/* ---------- Autorização de contato (US-14) ---------- */
+.autorizacoes { display: grid; gap: 12px; margin: 4px 0 0; padding: 16px; border: 1px solid var(--borda-suave); border-radius: 14px; min-width: 0; }
+.autorizacoes legend { padding: 0 6px; font-size: 15px; font-weight: 700; }
+.autorizacoes__ajuda { font-size: 13px; color: var(--texto-suave); }
+.autorizacoes__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.autorizacao { display: grid; gap: 4px; padding: 12px; border-radius: 10px; background: var(--fundo-claro); font-size: 13px; }
+.autorizacao__topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14.5px; }
+.autorizacao__meta { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.autorizacao__sinc { color: var(--texto-suave); }
+.autorizacao__sinc--ok { color: var(--sucesso); }
+.autorizacao__sinc--alerta { color: var(--alerta); font-weight: 600; }
+.autorizacao__acoes { display: flex; gap: 16px; margin-top: 4px; }
+.consulta__aviso { max-width: 260px; font-size: 12.5px; color: var(--alerta); text-align: right; }
 a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); outline-offset: 3px; }
+
+/* ---------- Sincronização (US-18) ---------- */
+.sincronizacao { display: flex; flex-direction: column; gap: 8px; }
+.sincronizacao__lista { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.sincronizacao__item { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px;
+  font-size: 13px; font-variant-numeric: tabular-nums; color: var(--neutro); background: var(--neutro-fundo); }
+.sincronizacao__item--sucesso { color: var(--sucesso); background: var(--sucesso-fundo); }
+.sincronizacao__item--alerta { color: var(--alerta); background: var(--alerta-fundo); }
+.sincronizacao__item--perigo { color: var(--perigo); background: var(--perigo-fundo); }
+.sincronizacao__pendentes { font-size: 13.5px; color: var(--alerta); }
+.sincronizacao__pendentes:empty { display: none; }
+.consulta__selos { flex-wrap: wrap; justify-content: flex-end; }
+.consulta__aviso { max-width: 340px; font-size: 12.5px; line-height: 1.4; color: var(--alerta); text-align: right; }
+.consulta__resultado { max-width: 340px; padding: 6px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; text-align: right; }
+.consulta__resultado--ok { color: var(--sucesso); background: var(--sucesso-fundo); }
+.consulta__resultado--erro { color: var(--perigo); background: var(--perigo-fundo); }
+.consulta__resultado--alerta { color: var(--alerta); background: var(--alerta-fundo); }
+.acao:disabled { opacity: 0.5; cursor: default; text-decoration: none; }
+.demo__erro { margin-top: 10px; font-size: 13px; }
 
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulsar { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.4); opacity: 0; } }
@@ -258,4 +292,6 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); o
   .indicadores { grid-template-columns: 1fr; }
   .consulta { grid-template-columns: 48px 2px 40px minmax(0, 1fr); }
   .consulta > .consulta__lateral { grid-column: 1 / -1; grid-row: 2; align-items: flex-start; margin-top: 12px; }
+  .consulta__selos { justify-content: flex-start; }
+  .consulta__aviso, .consulta__resultado { text-align: left; }
 }

@@ -22,7 +22,7 @@ async function main() {
   const pararRotina = iniciarRotinaEnvio(criarCanalEnvio(), config.rotinaEnvioIntervaloMs, config.envioMaxTentativas);
 
   const servidor = criarApp().listen(config.porta, () => {
-    console.log(`[notificacao] ouvindo na porta ${config.porta} (antecedência ${config.antecedenciaMinutos} min)`);
+    console.log(`[notificacao] ouvindo na porta ${config.porta} (modo ${config.modoAntecedencia}, antecedência ${config.antecedenciaMinutos} min)`);
   });
 
   const encerrar = async () => {

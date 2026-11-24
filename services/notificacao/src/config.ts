@@ -1,16 +1,19 @@
+import { lerConfiguracaoLembretes } from './lembretes/configuracao';
+
 function obrigatoria(nome: string): string {
   const valor = process.env[nome];
   if (!valor) throw new Error(`Variável de ambiente ${nome} não definida`);
   return valor;
 }
 
+/** Canal de contato dos lembretes: o envio real e o simulado usam WhatsApp. */
+export const CANAL_LEMBRETE = 'whatsapp' as const;
+
 export const config = {
   porta: Number(process.env.PORTA ?? 3002),
   rabbitUrl: obrigatoria('RABBITMQ_URL'),
-  antecedenciaMinutos: Number(process.env.LEMBRETE_ANTECEDENCIA_MINUTOS ?? 1440),
-  rotinaEnvioIntervaloMs: Number(process.env.ROTINA_ENVIO_INTERVALO_MS ?? 5000),
+  ...lerConfiguracaoLembretes(process.env),
   consumidorMaxTentativas: Number(process.env.CONSUMIDOR_MAX_TENTATIVAS ?? 3),
-  envioMaxTentativas: Number(process.env.ENVIO_MAX_TENTATIVAS ?? 3),
   canalEnvio: process.env.CANAL_ENVIO === 'whatsapp' ? 'whatsapp' : 'log',
   whatsapp: {
     token: process.env.WHATSAPP_TOKEN ?? '',

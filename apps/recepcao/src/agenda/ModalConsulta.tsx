@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { agendamentoApi } from '../api/agendamento';
 import { cadastroApi, type PacienteAgendamento } from '../api/cadastro';
+import { descreverFalha } from '../api/http';
 import { ESPECIALIDADES, PROFISSIONAIS } from '../dados/profissionais';
 import { chaveDia, chaveDiaDaqui, dataHora, hora, isoRecife, mascaraCpf, mascaraTelefone } from '../formatacao';
 import type { Consulta } from '../tipos';
@@ -111,7 +112,9 @@ export function ModalConsulta({ modo, aoFechar, aoSalvar }: Props) {
       await aoSalvar();
       aoFechar();
     } catch (e) {
-      setErro((e as Error).message);
+      // Sem resposta, a gravação pode ter acontecido: a mensagem pede para conferir a agenda antes de repetir.
+      setErro(descreverFalha(e, remarcando ? 'a remarcação' : 'o agendamento'));
+      void aoSalvar();
     } finally {
       setEnviando(false);
     }
@@ -211,7 +214,7 @@ export function ModalConsulta({ modo, aoFechar, aoSalvar }: Props) {
           <input type="time" required value={form.hora} onChange={(e) => alterar({ hora: e.target.value })} />
         </label>
 
-        {erro && <p className="aviso aviso--erro campo--inteiro">{erro}</p>}
+        {erro && <p className="aviso aviso--erro campo--inteiro" role="alert">{erro}</p>}
 
         <div className="modal__acoes">
           <button type="button" className="botao botao--secundario" onClick={aoFechar}>Voltar</button>

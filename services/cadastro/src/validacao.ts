@@ -1,3 +1,4 @@
+import { CANAIS_CONTATO, ORIGENS_AUTORIZACAO, SITUACOES_AUTORIZACAO } from '@clinica/eventos';
 import { z } from 'zod';
 
 const cpfNormalizado = z.string().trim().regex(/^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
@@ -20,10 +21,18 @@ export const esquemaContato = z.object({
     .refine((v) => v <= new Date().toISOString().slice(0, 10))
     .transform((v) => new Date(`${v}T00:00:00.000Z`)).nullable().optional(),
   convenio: z.string().trim().max(120).nullable().transform((v) => v || null).optional(),
+  canalPreferido: z.enum(CANAIS_CONTATO).nullable().optional(),
   // Permite conferir o CPF, sem escrever nele.
   cpf: cpfNormalizado.optional(),
   revisao: z.number().int().positive(),
 }).strict().refine(({ revisao: _revisao, ...campos }) => Object.values(campos).some((v) => v !== undefined));
+
+/** Uma decisão do paciente sobre um canal. A data e a versão são definidas pelo Cadastro. */
+export const esquemaAutorizacao = z.object({
+  canal: z.enum(CANAIS_CONTATO),
+  situacao: z.enum(SITUACOES_AUTORIZACAO),
+  origem: z.enum(ORIGENS_AUTORIZACAO),
+}).strict();
 
 export const esquemaPacienteAgendado = z.object({
   id_evento: z.string().min(1),

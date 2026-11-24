@@ -1,11 +1,11 @@
 import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import {
-  FILA_NOTIFICACAO, FILA_NOTIFICACAO_ERROS, validarEventoConsulta, validarPacienteAtualizado,
-  type EventoConsulta, type PacienteAtualizado, type Validacao,
+  FILA_NOTIFICACAO, FILA_NOTIFICACAO_ERROS, validarAutorizacaoContato, validarEventoConsulta, validarPacienteAtualizado,
+  type Validacao,
 } from '@clinica/eventos';
 import { registrarAtividade } from '../atividades/registro';
 import { prisma } from '../db';
-import { tratarEvento } from './tratadores';
+import { tratarEvento, type EventoRecebido } from './tratadores';
 
 const HEADER_TENTATIVAS = 'x-tentativas';
 const HEADER_MOTIVO = 'x-motivo';
@@ -65,7 +65,7 @@ async function processar(msg: ConsumeMessage): Promise<void> {
         acao: 'evento.duplicado',
         descricao: `${evento.tipo} repetido ignorado`,
         idEvento: evento.id_evento,
-        idConsulta: evento.tipo === 'paciente.atualizado' ? undefined : evento.payload.id_consulta,
+        idConsulta: idConsultaDe(evento),
       });
     }
     canal.ack(msg);
@@ -74,7 +74,9 @@ async function processar(msg: ConsumeMessage): Promise<void> {
   }
 }
 
-function lerEvento(msg: ConsumeMessage): Validacao<EventoConsulta | PacienteAtualizado> {
+const idConsultaDe = (evento: EventoRecebido) => ('id_consulta' in evento.payload ? evento.payload.id_consulta : undefined);
+
+function lerEvento(msg: ConsumeMessage): Validacao<EventoRecebido> {
   let valor: unknown;
   try {
     valor = JSON.parse(msg.content.toString());
@@ -82,7 +84,9 @@ function lerEvento(msg: ConsumeMessage): Validacao<EventoConsulta | PacienteAtua
     return { ok: false, motivo: 'mensagem não é JSON válido' };
   }
   const tipo = (valor as { tipo?: unknown } | null)?.tipo;
-  return tipo === 'paciente.atualizado' ? validarPacienteAtualizado(valor) : validarEventoConsulta(valor);
+  if (tipo === 'paciente.atualizado') return validarPacienteAtualizado(valor);
+  if (tipo === 'paciente.autorizacao_alterada') return validarAutorizacaoContato(valor);
+  return validarEventoConsulta(valor);
 }
 
 async function recusar(msg: ConsumeMessage, motivo: string): Promise<void> {
@@ -132,9 +136,9 @@ function lerIdEvento(msg: ConsumeMessage): string | undefined {
 }
 
 /** Tenta de novo republicando na própria fila; esgotadas as tentativas, manda para a fila de erros. */
-async function tratarFalha(msg: ConsumeMessage, evento: EventoConsulta | PacienteAtualizado, erro: unknown): Promise<void> {
+async function tratarFalha(msg: ConsumeMessage, evento: EventoRecebido, erro: unknown): Promise<void> {
   const tentativa = Number(msg.properties.headers?.[HEADER_TENTATIVAS] ?? 0) + 1;
-  const base = { idEvento: evento.id_evento, idConsulta: evento.tipo === 'paciente.atualizado' ? undefined : evento.payload.id_consulta };
+  const base = { idEvento: evento.id_evento, idConsulta: idConsultaDe(evento) };
   console.error(`[consumidor] falha ao processar ${evento.id_evento} (tentativa ${tentativa})`);
 
   if (tentativa < maxTentativas) {

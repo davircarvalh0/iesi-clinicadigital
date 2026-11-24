@@ -1,7 +1,7 @@
 // Formato das respostas HTTP dos serviços (não confundir com os eventos do barramento).
 
 export type StatusConsulta = 'agendada' | 'cancelada';
-export type StatusLembrete = 'programado' | 'enviado' | 'falhou' | 'cancelado';
+export type StatusLembrete = 'programado' | 'enviado' | 'simulado' | 'aceito_provedor' | 'falhou' | 'cancelado';
 
 export interface Consulta {
   id: string;
@@ -20,8 +20,15 @@ export interface Lembrete {
   id: string;
   idConsulta: string;
   status: StatusLembrete;
+  /** Início da consulta que a Notificação conhece; difere da agenda enquanto a remarcação não chega. */
+  inicioConsulta?: string;
   enviarEm: string;
+  antecedenciaMinutos: number | null;
   enviadoEm: string | null;
+  modoEnvio: 'simulado' | 'real' | null;
+  canalEnvio: 'log' | 'whatsapp' | null;
+  idExterno: string | null;
+  tentativas: number;
   motivoFalha: string | null;
 }
 

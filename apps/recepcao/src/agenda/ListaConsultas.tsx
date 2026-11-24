@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { chaveDia, chaveDiaDaqui, rotuloDia } from '../formatacao';
+import type { AcaoCancelamento, Situacao } from '../sincronizacao';
 import type { Consulta, Lembrete } from '../tipos';
 import { ItemConsulta } from './ItemConsulta';
 
@@ -9,11 +10,13 @@ const ROTULOS: Record<Filtro, string> = { hoje: 'Hoje', semana: 'Semana', todas:
 interface Props {
   consultas: Consulta[];
   lembretePorConsulta: Map<string, Lembrete>;
+  situacaoLembretes: Situacao;
+  acaoPorConsulta: Map<string, AcaoCancelamento>;
   aoRemarcar: (consulta: Consulta) => void;
   aoCancelar: (consulta: Consulta) => void;
 }
 
-export function ListaConsultas({ consultas, lembretePorConsulta, aoRemarcar, aoCancelar }: Props) {
+export function ListaConsultas({ consultas, lembretePorConsulta, situacaoLembretes, acaoPorConsulta, aoRemarcar, aoCancelar }: Props) {
   const [filtro, setFiltro] = useState<Filtro>('semana');
 
   const porFiltro = useMemo(() => {
@@ -52,6 +55,8 @@ export function ListaConsultas({ consultas, lembretePorConsulta, aoRemarcar, aoC
               key={c.id}
               consulta={c}
               lembrete={lembretePorConsulta.get(c.id)}
+              situacaoLembretes={situacaoLembretes}
+              acao={acaoPorConsulta.get(c.id)}
               aoRemarcar={() => aoRemarcar(c)}
               aoCancelar={() => aoCancelar(c)}
             />

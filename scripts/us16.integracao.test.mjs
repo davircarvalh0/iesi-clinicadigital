@@ -65,15 +65,34 @@ async function agendar(inicio) {
   return resposta.dados.id;
 }
 
+async function autorizarWhatsApp() {
+  const { dados } = await aguardar(
+    () => api('cadastro/pacientes/busca-cpf', { method: 'POST', body: { cpf: CPF } }),
+    (r) => !!r.dados?.paciente, 'paciente no Cadastro',
+  );
+  const id = dados.paciente.id;
+  const registro = await api(`cadastro/pacientes/${id}/autorizacoes`, {
+    method: 'POST', body: { canal: 'whatsapp', situacao: 'autorizado', origem: 'presencial' },
+  });
+  assert.equal(registro.status, 201);
+  await aguardar(
+    async () => (await api(`notificacao/autorizacoes/${id}`)).dados,
+    (copia) => copia?.autorizacoes?.some((a) => a.canal === 'whatsapp' && a.situacao === 'autorizado'),
+    'autorização copiada pela Notificação',
+  );
+}
+
 const lembrete = async (idConsulta) => (await api(`notificacao/lembretes?consulta=${idConsulta}`)).dados?.[0];
 
 test('US-16: atividades, painel e logs não expõem nome, CPF nem telefone (CA1, CA2, CA3)', { timeout: 180000 }, async () => {
   const inicioDoTeste = new Date(Date.now() - 5000).toISOString();
 
-  // Consulta próxima: com antecedência padrão de 24h, o lembrete é enviado no próximo ciclo.
-  const enviada = await agendar(emHoras(1));
   // Consulta futura: passa por programado, reprogramado e cancelado.
   const cancelada = await agendar(emHoras(24 * 7));
+  // US-14: sem autorização de WhatsApp o lembrete seria bloqueado; registra antes da consulta próxima.
+  await autorizarWhatsApp();
+  // Consulta próxima: com antecedência padrão de 24h, o lembrete é enviado no próximo ciclo.
+  const enviada = await agendar(emHoras(1));
 
   await aguardar(() => lembrete(enviada), (l) => l?.status === 'enviado', 'lembrete enviado');
   await aguardar(() => lembrete(cancelada), (l) => l?.status === 'programado', 'lembrete programado');

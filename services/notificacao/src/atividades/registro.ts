@@ -5,8 +5,13 @@ export type Acao =
   | 'lembrete.programado'
   | 'lembrete.reprogramado'
   | 'lembrete.cancelado'
-  | 'lembrete.enviado'
+  | 'lembrete.expirado'
+  | 'lembrete.simulado'
+  | 'lembrete.aceito_provedor'
   | 'lembrete.falhou'
+  | 'lembrete.bloqueado'
+  | 'lembrete.liberado'
+  | 'autorizacao.atualizada'
   | 'envio.nova_tentativa'
   | 'evento.duplicado'
   | 'evento.nova_tentativa'
@@ -31,10 +36,8 @@ export const mascararDados = (texto: string) =>
  * A descrição não leva nome, CPF nem telefone: a consulta é identificada por `idConsulta`.
  */
 export async function registrarAtividade(dados: DadosAtividade, db: Prisma.TransactionClient = prisma) {
-  const atividade = { ...dados, descricao: mascararDados(dados.descricao) };
-  await db.atividade.create({ data: atividade });
-  const consulta = atividade.idConsulta ? ` consulta=${atividade.idConsulta.slice(0, 8)}` : '';
-  console.log(`[atividade] ${atividade.acao}${consulta}: ${atividade.descricao}`);
+  await db.atividade.create({ data: dados });
+  console.log(`[atividade] ${dados.acao}`);
 }
 
 const fmtDataHora = new Intl.DateTimeFormat('pt-BR', {

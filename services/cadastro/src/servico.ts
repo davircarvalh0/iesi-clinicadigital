@@ -1,7 +1,7 @@
-import { criarEnvelope } from '@clinica/eventos';
-import { Prisma, type Paciente } from '../generated/prisma';
+import { CANAIS_CONTATO, criarEnvelope, isoRecife } from '@clinica/eventos';
+import { Prisma, type AutorizacaoContato, type Paciente } from '../generated/prisma';
 import { prisma } from './db';
-import { esquemaBusca, esquemaBuscaCpf, esquemaContato, esquemaPacienteAgendado } from './validacao';
+import { esquemaAutorizacao, esquemaBusca, esquemaBuscaCpf, esquemaContato, esquemaPacienteAgendado } from './validacao';
 
 export class ErroCadastro extends Error {
   constructor(public status: number, mensagem: string) { super(mensagem); }
@@ -11,11 +11,32 @@ const camposLista = {
   id: true, cpf: true, nome: true, telefone: true, email: true, revisao: true,
 } as const;
 
-const camposDetalhe = { ...camposLista, nascimento: true, convenio: true } as const;
+const camposDetalhe = { ...camposLista, nascimento: true, convenio: true, canalPreferido: true } as const;
 type PacienteDetalhe = Prisma.PacienteGetPayload<{ select: typeof camposDetalhe }>;
+type Leitor = Prisma.TransactionClient | typeof prisma;
 
-function apresentarDetalhe({ id, cpf, nome, telefone, email, revisao, nascimento, convenio }: PacienteDetalhe) {
-  return { id, cpf, nome, telefone, email, revisao, nascimento: nascimento?.toISOString().slice(0, 10) ?? null, convenio };
+async function apresentarDetalhe(db: Leitor, p: PacienteDetalhe) {
+  const { id, cpf, nome, telefone, email, revisao, nascimento, convenio, canalPreferido } = p;
+  return {
+    id, cpf, nome, telefone, email, revisao, nascimento: nascimento?.toISOString().slice(0, 10) ?? null, convenio,
+    canalPreferido, autorizacoes: await situacaoAutorizacoes(db, id),
+  };
+}
+
+function apresentarAutorizacao(a: AutorizacaoContato) {
+  return { canal: a.canal, situacao: a.situacao, origem: a.origem, registradoEm: a.registradoEm.toISOString(), versao: a.versao };
+}
+
+/** Situação atual de cada canal: o registro de maior versão. Sem registro não é autorização. */
+async function situacaoAutorizacoes(db: Leitor, idPaciente: string) {
+  const registros = await db.autorizacaoContato.findMany({
+    where: { idPaciente }, orderBy: [{ canal: 'asc' }, { versao: 'desc' }], distinct: ['canal'],
+  });
+  return CANAIS_CONTATO.map((canal) => {
+    const atual = registros.find((r) => r.canal === canal);
+    return atual ? apresentarAutorizacao(atual)
+      : { canal, situacao: 'sem_registro' as const, origem: null, registradoEm: null, versao: 0 };
+  });
 }
 
 async function enfileirar(tx: Prisma.TransactionClient, paciente: Paciente, correlacao: string) {
@@ -56,7 +77,7 @@ export function buscarPorCpf(entrada: unknown) {
 export async function detalhar(id: string) {
   const paciente = await prisma.paciente.findUnique({ where: { id }, select: camposDetalhe });
   if (!paciente) throw new ErroCadastro(404, 'Paciente não encontrado');
-  return apresentarDetalhe(paciente);
+  return apresentarDetalhe(prisma, paciente);
 }
 
 export async function atualizar(id: string, entrada: unknown) {
@@ -72,7 +93,7 @@ export async function atualizar(id: string, entrada: unknown) {
       }
       if (Object.keys(contato).length === 0) {
         if (atual.revisao !== revisao) throw erroDeRevisao();
-        return apresentarDetalhe(atual);
+        return apresentarDetalhe(tx, atual);
       }
     }
     const alteracao = await tx.paciente.updateMany({ where: { id, revisao }, data: { ...contato, revisao: { increment: 1 } } });
@@ -82,8 +103,50 @@ export async function atualizar(id: string, entrada: unknown) {
     }
     const paciente = await tx.paciente.findUniqueOrThrow({ where: { id } });
     await enfileirar(tx, paciente, `paciente-${id}`);
-    return apresentarDetalhe(paciente);
+    return apresentarDetalhe(tx, paciente);
   });
+}
+
+/**
+ * Registra uma autorização ou revogação e publica `paciente.autorizacao_alterada` v1 pela outbox,
+ * na mesma transação. A versão cresce por paciente e canal; o índice único arbitra registros simultâneos.
+ */
+export async function registrarAutorizacao(id: string, entrada: unknown) {
+  const { canal, situacao, origem } = esquemaAutorizacao.parse(entrada);
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const paciente = await tx.paciente.findUnique({ where: { id }, select: { id: true, cpf: true } });
+      if (!paciente) throw new ErroCadastro(404, 'Paciente não encontrado');
+      const ultima = await tx.autorizacaoContato.findFirst({ where: { idPaciente: id, canal }, orderBy: { versao: 'desc' } });
+      const registro = await tx.autorizacaoContato.create({
+        data: { idPaciente: id, canal, situacao, origem, versao: (ultima?.versao ?? 0) + 1 },
+      });
+      const evento = criarEnvelope({
+        tipo: 'paciente.autorizacao_alterada', origem: 'cadastro', id_correlacao: `paciente-${id}`,
+        payload: {
+          id_paciente: id, cpf: paciente.cpf, canal, situacao, origem_registro: origem,
+          registrado_em: isoRecife(registro.registradoEm), versao: registro.versao,
+        },
+      });
+      await tx.eventoSaida.create({ data: {
+        idEvento: evento.id_evento, tipo: evento.tipo, envelope: evento as unknown as Prisma.InputJsonValue,
+      } });
+      return { registro: apresentarAutorizacao(registro), autorizacoes: await situacaoAutorizacoes(tx, id) };
+    });
+  } catch (erro) {
+    if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002') {
+      throw new ErroCadastro(409, 'Autorização registrada por outra pessoa ao mesmo tempo. Recarregue e tente de novo.');
+    }
+    throw erro;
+  }
+}
+
+/** Histórico completo de um paciente, do registro mais recente para o mais antigo. */
+export async function historicoAutorizacoes(id: string) {
+  const paciente = await prisma.paciente.findUnique({ where: { id }, select: { id: true } });
+  if (!paciente) throw new ErroCadastro(404, 'Paciente não encontrado');
+  const registros = await prisma.autorizacaoContato.findMany({ where: { idPaciente: id }, orderBy: [{ registradoEm: 'desc' }, { versao: 'desc' }] });
+  return { historico: registros.map(apresentarAutorizacao) };
 }
 
 function erroDeRevisao() {
