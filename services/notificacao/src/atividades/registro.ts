@@ -5,6 +5,8 @@ export type Acao =
   | 'lembrete.programado'
   | 'lembrete.reprogramado'
   | 'lembrete.cancelado'
+  | 'lembrete.evento_obsoleto'
+  | 'lembrete.corrida_envio'
   | 'lembrete.expirado'
   | 'lembrete.simulado'
   | 'lembrete.aceito_provedor'

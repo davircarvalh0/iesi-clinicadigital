@@ -10,6 +10,8 @@ datasource db {
 
 enum StatusLembrete {
   programado
+  /// US-11: reservado pela rotina de envio enquanto o canal está sendo chamado.
+  enviando
   enviado
   simulado
   aceito_provedor
@@ -47,6 +49,8 @@ model Lembrete {
   modoEnvio           ModoEnvio?     @map("modo_envio")
   canalEnvio          CanalLembrete? @map("canal_envio")
   idExterno           String?        @map("id_externo")
+  /// US-11: sequência do último evento de consulta aplicado; nulo quando só eventos sem sequência foram recebidos.
+  sequenciaAplicada   Int?           @map("sequencia_aplicada")
   criadoEm            DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
