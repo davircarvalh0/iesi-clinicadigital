@@ -12,7 +12,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "test": "tsx --test test/*.test.ts",
     "test:us01:db": "tsx --test test-integracao/us01.test.ts",
-    "test:us02:api": "tsx --test test-integracao/us02.test.ts"
+    "test:us02:api": "tsx --test test-integracao/us02.test.ts",
+    "test:us14:db": "tsx --test test-integracao/us14.test.ts"
   },
   "dependencies": {
     "@clinica/eventos": "*",

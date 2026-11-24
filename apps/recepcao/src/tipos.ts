@@ -20,6 +20,8 @@ export interface Lembrete {
   id: string;
   idConsulta: string;
   status: StatusLembrete;
+  /** Início da consulta que a Notificação conhece; difere da agenda enquanto a remarcação não chega. */
+  inicioConsulta?: string;
   enviarEm: string;
   antecedenciaMinutos: number | null;
   enviadoEm: string | null;

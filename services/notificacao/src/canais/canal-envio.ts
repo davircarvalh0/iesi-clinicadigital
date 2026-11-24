@@ -1,3 +1,5 @@
+import type { CanalContato } from '@clinica/eventos';
+
 /** Dados mínimos de que um canal precisa para enviar o lembrete. */
 export interface MensagemLembrete {
   /** Telefone no formato internacional, só dígitos (ex.: 5581999999999). */

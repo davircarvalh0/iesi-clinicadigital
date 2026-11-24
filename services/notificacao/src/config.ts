@@ -6,6 +6,9 @@ function obrigatoria(nome: string): string {
   return valor;
 }
 
+/** Canal de contato dos lembretes: o envio real e o simulado usam WhatsApp. */
+export const CANAL_LEMBRETE = 'whatsapp' as const;
+
 export const config = {
   porta: Number(process.env.PORTA ?? 3002),
   rabbitUrl: obrigatoria('RABBITMQ_URL'),
