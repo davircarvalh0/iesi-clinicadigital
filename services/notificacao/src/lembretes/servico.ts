@@ -76,8 +76,8 @@ export async function cancelar(tx: Prisma.TransactionClient, payload: PayloadCon
     {
       acao: 'lembrete.cancelado',
       descricao: count
-        ? `${payload.paciente.nome}: lembrete cancelado`
-        : `${payload.paciente.nome}: consulta cancelada, mas o lembrete já tinha sido enviado`,
+        ? 'lembrete cancelado'
+        : 'consulta cancelada, mas o lembrete já tinha sido enviado',
       idEvento,
       idConsulta: payload.id_consulta,
     },

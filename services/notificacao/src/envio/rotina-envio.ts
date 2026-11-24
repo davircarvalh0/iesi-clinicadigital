@@ -129,3 +129,10 @@ async function tentarEnvio(canal: CanalEnvio, lembrete: Lembrete) {
     return { ok: false, motivo } as const;
   }
 }
+
+// Só o código: a mensagem de erro do banco pode conter dados do lembrete.
+function codigoErro(erro: unknown): string {
+  const { code, errorCode } = (erro ?? {}) as { code?: unknown; errorCode?: unknown };
+  const codigo = code ?? errorCode;
+  return typeof codigo === 'string' ? codigo : 'sem código';
+}
