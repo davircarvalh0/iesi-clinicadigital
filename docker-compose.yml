@@ -1,12 +1,13 @@
-# Sobe tudo com: docker compose up --build
+# Sobe tudo com: docker compose up --build --wait
+# Portas publicadas no host são configuráveis (veja .env.example) para rodar um ambiente isolado em paralelo.
 name: iesi-clinicadigital
 
 services:
   rabbitmq:
     image: rabbitmq:4-management-alpine
     ports:
-      - "5672:5672"
-      - "15672:15672" # painel: http://localhost:15672 (clinica/clinica)
+      - "${RABBITMQ_PORTA:-5672}:5672"
+      - "${RABBITMQ_PAINEL_PORTA:-15672}:15672" # painel: http://localhost:15672 (clinica/clinica)
     volumes:
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
@@ -25,11 +26,11 @@ services:
       POSTGRES_PASSWORD: agendamento
       POSTGRES_DB: agendamento
     ports:
-      - "5433:5432"
+      - "${DB_AGENDAMENTO_PORTA:-5433}:5432"
     volumes:
       - db-agendamento-dados:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agendamento"]
+      test: ["CMD-SHELL", "pg_isready -U agendamento -d agendamento"]
       interval: 3s
       retries: 20
 
@@ -40,11 +41,11 @@ services:
       POSTGRES_PASSWORD: notificacao
       POSTGRES_DB: notificacao
     ports:
-      - "5434:5432"
+      - "${DB_NOTIFICACAO_PORTA:-5434}:5432"
     volumes:
       - db-notificacao-dados:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U notificacao"]
+      test: ["CMD-SHELL", "pg_isready -U notificacao -d notificacao"]
       interval: 3s
       retries: 20
 
@@ -55,14 +56,16 @@ services:
       POSTGRES_PASSWORD: cadastro
       POSTGRES_DB: cadastro
     ports:
-      - "5435:5432"
+      - "${DB_CADASTRO_PORTA:-5435}:5432"
     volumes:
       - db-cadastro-dados:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cadastro"]
+      test: ["CMD-SHELL", "pg_isready -U cadastro -d cadastro"]
       interval: 3s
       retries: 20
 
+  # Cada serviço aplica as próprias migrações ao iniciar (prisma migrate deploy) e só fica
+  # "healthy" depois de responder em /saude, ou seja, com o banco migrado e o broker conectado.
   cadastro:
     build:
       context: .
@@ -73,10 +76,17 @@ services:
       DATABASE_URL: postgresql://cadastro:cadastro@db-cadastro:5432/cadastro
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
     ports:
-      - "3003:3003"
+      - "${CADASTRO_PORTA:-3003}:3003"
     depends_on:
       db-cadastro: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3003/saude"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 60s
+      start_interval: 2s
 
   agendamento:
     build:
@@ -88,10 +98,17 @@ services:
       DATABASE_URL: postgresql://agendamento:agendamento@db-agendamento:5432/agendamento
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
     ports:
-      - "3001:3001"
+      - "${AGENDAMENTO_PORTA:-3001}:3001"
     depends_on:
       db-agendamento: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/saude"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 60s
+      start_interval: 2s
 
   notificacao:
     build:
@@ -110,21 +127,36 @@ services:
       WHATSAPP_TEMPLATE_LANG: ${WHATSAPP_TEMPLATE_LANG:-en_US}
       WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v21.0}
     ports:
-      - "3002:3002"
+      - "${NOTIFICACAO_PORTA:-3002}:3002"
     depends_on:
       db-notificacao: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3002/saude"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 60s
+      start_interval: 2s
 
   recepcao:
     build:
       context: .
       dockerfile: apps/recepcao/Dockerfile
+    restart: unless-stopped
     ports:
-      - "8080:80" # tela: http://localhost:8080
+      - "${RECEPCAO_PORTA:-8080}:80" # tela: http://localhost:8080
     depends_on:
-      - agendamento
-      - notificacao
-      - cadastro
+      agendamento: { condition: service_healthy }
+      notificacao: { condition: service_healthy }
+      cadastro: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+      start_interval: 2s
 
 volumes:
   rabbitmq-dados:
