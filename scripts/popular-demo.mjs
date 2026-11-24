@@ -91,6 +91,14 @@ for (const [cpf, idPaciente] of idPorCpf) {
   });
   autorizados += 1;
 }
+// Espera a Notificação aplicar a cópia de cada autorização (é ela que libera o envio). Sem isso, a carga
+// terminava com eventos ainda na fila e uma contagem tirada logo depois mudava sozinha.
+for (const [cpf, idPaciente] of idPorCpf) {
+  if (CPFS_SEM_AUTORIZACAO_DEMO.has(cpf)) continue;
+  await aguardar('autorização de WhatsApp aplicada na Notificação', async () =>
+    (await chamar(`/api/notificacao/autorizacoes/${idPaciente}`)).autorizacoes
+      ?.some((a) => a.canal === 'whatsapp' && a.situacao === 'autorizado'));
+}
 console.log(`Autorizações de WhatsApp registradas agora: ${autorizados} (1 paciente fica sem registro de propósito).`);
 
 const pacientesVinculados = new Set(resumo.demo.map((c) => c.idPaciente)).size;

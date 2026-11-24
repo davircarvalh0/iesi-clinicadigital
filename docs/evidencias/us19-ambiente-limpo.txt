@@ -1,24 +1,22 @@
 === Contexto ===
-Data: 2026-11-24T17:35:57.722Z (America/Recife: 24/11/2026, 14:35:57)
+Data: 2026-11-24T20:52:27.973Z (America/Recife: 24/11/2026, 17:52:27)
 Projeto Compose isolado: iesi-clinicadigital-us19-limpo; configuração: .env.example; recepção em http://localhost:18080
 Portas: RECEPCAO_PORTA=18080 AGENDAMENTO_PORTA=13001 NOTIFICACAO_PORTA=13002 CADASTRO_PORTA=13003 RABBITMQ_PORTA=25672 RABBITMQ_PAINEL_PORTA=25673 DB_AGENDAMENTO_PORTA=15433 DB_NOTIFICACAO_PORTA=15434 DB_CADASTRO_PORTA=15435
-Commit: 8256302cbd0f5184986307ff64d71879166cb7e0 (feat/us-19-ambiente-limpo)
+Commit: 8be656465f7c826c7cc11fe3b5bba2e5de853149 (feat/us-24-defesa) + alterações locais não commitadas
 
 === Versões das ferramentas ===
 SO: Windows_NT 10.0.26200; Node v24.11.1
-npm 11.6.2
+npm ? (rode via npm run ambiente:limpo)
 Docker cliente 29.0.1; servidor 29.0.1 (linux/amd64)
 Docker Compose version v2.40.3-desktop.1
 
 === Preparação: ambiente limpo ===
 $ docker compose -p iesi-clinicadigital-us19-limpo --env-file .env.example down --volumes --remove-orphans
 [OK] CA1: nenhum volume do projeto isolado antes da execução (zero volumes)
-$ docker compose -p iesi-clinicadigital-us19-limpo --env-file .env.example build --pull --no-cache
-(build sem cache: 118.8 s)
 
 === Execução 1: compilar, migrar e subir (banco vazio) ===
 $ docker compose -p iesi-clinicadigital-us19-limpo --env-file .env.example up -d --build --wait --wait-timeout 300
-(up execução 1: 41.3 s)
+(up execução 1: 21.5 s)
 agendamento	running	healthy
 cadastro	running	healthy
 db-agendamento	running	healthy
@@ -28,27 +26,36 @@ notificacao	running	healthy
 rabbitmq	running	healthy
 recepcao	running	healthy
 [OK] CA1: 8 containers em execução e healthy (8/8)
-[OK] CA1: migrações de agendamento aplicadas (3/3)
-[OK] CA1: migrações de notificacao aplicadas (2/2)
-[OK] CA1: migrações de cadastro aplicadas (2/2)
+[OK] CA1: migrações de agendamento aplicadas (4/4)
+[OK] CA1: migrações de notificacao aplicadas (9/9)
+[OK] CA1: migrações de cadastro aplicadas (3/3)
 [OK] CA1: recepção encaminha /api/agendamento/saude (HTTP 200)
 [OK] CA1: recepção encaminha /api/notificacao/saude (HTTP 200)
 [OK] CA1: recepção encaminha /api/cadastro/saude (HTTP 200)
 [OK] CA1: tela da recepção disponível (HTTP 200)
-agendamento: 3 migrations found in prisma/migrations
+agendamento: 4 migrations found in prisma/migrations
 agendamento: Applying migration `20261022000000_inicial`
 agendamento: Applying migration `20261109000000_vinculo_paciente`
 agendamento: Applying migration `20261112000000_projecao_paciente`
+agendamento: Applying migration `20261123120000_sequencia_consulta`
 agendamento: All migrations have been successfully applied.
 agendamento: [agendamento] ouvindo na porta 3001
-notificacao: 2 migrations found in prisma/migrations
+notificacao: 9 migrations found in prisma/migrations
 notificacao: Applying migration `20261022000000_inicial`
 notificacao: Applying migration `20261107000000_contatos_pacientes`
+notificacao: Applying migration `20261123000000_autorizacao_contato`
+notificacao: Applying migration `20261123000000_horario_lembretes`
+notificacao: Applying migration `20261123000100_resultado_envio`
+notificacao: Applying migration `20261123120000_sequencia_envio_lembretes`
+notificacao: Applying migration `20261123200000_reprocessamentos`
+notificacao: Applying migration `20261124120000_tentativas_envio`
+notificacao: Applying migration `20261124150000_envio_incerto`
 notificacao: All migrations have been successfully applied.
-notificacao: [notificacao] ouvindo na porta 3002 (antecedência 1440 min)
-cadastro: 2 migrations found in prisma/migrations
+notificacao: [notificacao] ouvindo na porta 3002 (modo demonstracao, antecedência 2 min)
+cadastro: 3 migrations found in prisma/migrations
 cadastro: Applying migration `20261107000000_inicial`
 cadastro: Applying migration `20261111000000_dados_mestres`
+cadastro: Applying migration `20261123000000_autorizacao_contato`
 cadastro: All migrations have been successfully applied.
 [OK] CA1: logs mostram migrações aplicadas na criação dos bancos
 Contagens antes da carga: {"consultas":0,"outbox_agendamento":0,"pacientes":0,"lembretes":0,"eventos_processados":0}
@@ -57,10 +64,11 @@ Contagens antes da carga: {"consultas":0,"outbox_agendamento":0,"pacientes":0,"l
 === Execução 1: carga de dados fictícios ===
 $ node scripts/popular-demo.mjs
 Carga gravada: 6 consulta(s) fictícia(s), 1 cancelada.
+Autorizações de WhatsApp registradas agora: 4 (1 paciente fica sem registro de propósito).
 Resumo (somente contagens; nenhum dado pessoal):
   Agendamento: 6 consulta(s) [agendada=5, cancelada=1]; fictícias da carga: 6
   Cadastro:    5 paciente(s) no total; 5 vinculado(s) às consultas fictícias
-  Notificação: 6 lembrete(s) [cancelado=1, enviado=4, programado=1]
+  Notificação: 6 lembrete(s) [cancelado=1, falhou=3, programado=2]
 
 Como obter as evidências (veja docs/US-19.md):
   Tela da recepção:  http://localhost:18080  (agenda, feed de atividades e Pacientes)
@@ -69,16 +77,16 @@ Como obter as evidências (veja docs/US-19.md):
   Pacientes:         http://localhost:18080/api/cadastro/pacientes?busca=000000
   Atividades:        http://localhost:18080/api/notificacao/atividades
   Roteiro completo:  npm run ambiente:limpo   (grava docs/evidencias/us19-ambiente-limpo.txt)
-(carga: 2.9 s)
-Contagens depois da carga: {"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":13}
-[OK] CA2: carga criou 6 consultas, 5 pacientes e 6 lembretes ({"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":13})
+(carga: 3.5 s)
+Contagens depois da carga: {"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":17}
+[OK] CA2: carga criou 6 consultas, 5 pacientes e 6 lembretes ({"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":17})
 [OK] CA2: carga documenta como obter as evidências
 [OK] CA2: Cadastro só contém CPFs da faixa fictícia 000.000.xxx (0 fora da faixa)
 
 === Execução 2: derrubar SEM apagar volumes e subir com o mesmo comando ===
 $ docker compose -p iesi-clinicadigital-us19-limpo --env-file .env.example down
 $ docker compose -p iesi-clinicadigital-us19-limpo --env-file .env.example up -d --build --wait --wait-timeout 300
-(up execução 2: 26.7 s)
+(up execução 2: 24.2 s)
 agendamento	running	healthy
 cadastro	running	healthy
 db-agendamento	running	healthy
@@ -88,30 +96,31 @@ notificacao	running	healthy
 rabbitmq	running	healthy
 recepcao	running	healthy
 [OK] CA3: 8 containers em execução e healthy (8/8)
-[OK] CA3: migrações de agendamento aplicadas (3/3)
-[OK] CA3: migrações de notificacao aplicadas (2/2)
-[OK] CA3: migrações de cadastro aplicadas (2/2)
+[OK] CA3: migrações de agendamento aplicadas (4/4)
+[OK] CA3: migrações de notificacao aplicadas (9/9)
+[OK] CA3: migrações de cadastro aplicadas (3/3)
 [OK] CA3: recepção encaminha /api/agendamento/saude (HTTP 200)
 [OK] CA3: recepção encaminha /api/notificacao/saude (HTTP 200)
 [OK] CA3: recepção encaminha /api/cadastro/saude (HTTP 200)
 [OK] CA3: tela da recepção disponível (HTTP 200)
-agendamento: 3 migrations found in prisma/migrations
+agendamento: 4 migrations found in prisma/migrations
 agendamento: No pending migrations to apply.
 agendamento: [agendamento] ouvindo na porta 3001
-notificacao: 2 migrations found in prisma/migrations
+notificacao: 9 migrations found in prisma/migrations
 notificacao: No pending migrations to apply.
-notificacao: [notificacao] ouvindo na porta 3002 (antecedência 1440 min)
-cadastro: 2 migrations found in prisma/migrations
+notificacao: [notificacao] ouvindo na porta 3002 (modo demonstracao, antecedência 2 min)
+cadastro: 3 migrations found in prisma/migrations
 cadastro: No pending migrations to apply.
 [OK] CA3: nenhuma migração reaplicada (No pending migrations em todos os serviços)
-Contagens depois da segunda subida: {"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":13}
+Contagens depois da segunda subida: {"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":17}
 [OK] CA3: dados preservados entre as execuções
 $ node scripts/popular-demo.mjs
 A agenda já tem 6 consulta(s); nada foi gravado. Conferindo o estado atual.
+Autorizações de WhatsApp registradas agora: 0 (1 paciente fica sem registro de propósito).
 Resumo (somente contagens; nenhum dado pessoal):
   Agendamento: 6 consulta(s) [agendada=5, cancelada=1]; fictícias da carga: 6
   Cadastro:    5 paciente(s) no total; 5 vinculado(s) às consultas fictícias
-  Notificação: 6 lembrete(s) [cancelado=1, enviado=4, programado=1]
+  Notificação: 6 lembrete(s) [cancelado=1, falhou=3, programado=2]
 
 Como obter as evidências (veja docs/US-19.md):
   Tela da recepção:  http://localhost:18080  (agenda, feed de atividades e Pacientes)
@@ -120,15 +129,15 @@ Como obter as evidências (veja docs/US-19.md):
   Pacientes:         http://localhost:18080/api/cadastro/pacientes?busca=000000
   Atividades:        http://localhost:18080/api/notificacao/atividades
   Roteiro completo:  npm run ambiente:limpo   (grava docs/evidencias/us19-ambiente-limpo.txt)
-[OK] CA3: segunda carga não duplica dados ({"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":13})
+[OK] CA3: segunda carga não duplica dados ({"consultas":6,"outbox_agendamento":7,"pacientes":5,"lembretes":6,"eventos_processados":17})
 
 === Versões efetivas das imagens ===
-iesi-clinicadigital-us19-limpo-cadastro:latest       iesi-clinicadigital-us19-limpo-cadastro@sha256:1eb872e5fad06d396b849fd6aa914463f1770c0d956c329fd0c7811db2d7eda7
-iesi-clinicadigital-us19-limpo-agendamento:latest    iesi-clinicadigital-us19-limpo-agendamento@sha256:0a3c8d3ce4414e92e6e1f790557d25ea7d2c2edbe8ba8310f8bf9ac922dcd578
-iesi-clinicadigital-us19-limpo-notificacao:latest    iesi-clinicadigital-us19-limpo-notificacao@sha256:99d1fec5358c0a88c1cc72a5f5d0509ce44e1cef8ce2e6c9e5d40d2911089343
-iesi-clinicadigital-us19-limpo-recepcao:latest       iesi-clinicadigital-us19-limpo-recepcao@sha256:fd420823dd9d9ed9eea7329da4e4df41680bdc5ed8c75eb43c6f5c9565ab2b0a
+iesi-clinicadigital-us19-limpo-agendamento:latest    iesi-clinicadigital-us19-limpo-agendamento@sha256:e9a7e9512e016a69750e13447cbc79144628abc41bae2ab91bb7fc3911337753
+iesi-clinicadigital-us19-limpo-cadastro:latest       iesi-clinicadigital-us19-limpo-cadastro@sha256:540d9736e888a43fff26345ba335a9f408e97469161e7b59c69fb9519aa596eb
+iesi-clinicadigital-us19-limpo-notificacao:latest    iesi-clinicadigital-us19-limpo-notificacao@sha256:df78da186151aa2f87cf94ba6de9b29b95fd1a55381328ebbf568606377aafc4
 postgres:17-alpine                                   postgres@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
 rabbitmq:4-management-alpine                         rabbitmq@sha256:fa8746831e6096fc9111365960e1e56871dd5d0d362af67fd48bd8d156aba818
+iesi-clinicadigital-us19-limpo-recepcao:latest       iesi-clinicadigital-us19-limpo-recepcao@sha256:d3fef869fc875583f90a9420e618652a2c827f07863bde868d80fab05e7f8841
 PostgreSQL: 17.11
 RabbitMQ: 4.4.1
 Node nos serviços: v24.22.3
@@ -139,6 +148,5 @@ nginx: nginx version: nginx/1.27.5
 CA1: APROVADO (10/10 verificações)
 CA2: APROVADO (4/4 verificações)
 CA3: APROVADO (11/11 verificações)
-Resultado geral: APROVADO; duração 211 s
-$ docker compose -p iesi-clinicadigital-us19-limpo --env-file .env.example down --volumes --remove-orphans
-Ambiente isolado removido (containers e volumes do projeto de teste).
+Resultado geral: APROVADO; duração 66 s
+Ambiente mantido no ar: http://localhost:18080. Para remover: docker compose -p iesi-clinicadigital-us19-limpo down -v
