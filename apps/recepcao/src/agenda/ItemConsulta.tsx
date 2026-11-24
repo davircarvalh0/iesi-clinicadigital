@@ -87,7 +87,7 @@ export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, a
         </div>
         {pendencia && <span className="consulta__aviso">{TEXTO_PENDENCIA[pendencia]}</span>}
         {selo && lembrete?.motivoFalha && (
-          <span className="consulta__detalhes">
+          <span className="consulta__motivo">
             {lembrete.motivoFalha}
             {lembrete.tentativas > 0 && ` · ${lembrete.tentativas} tentativa(s)`}
           </span>
