@@ -18,13 +18,14 @@
     "test:us04": "node --test scripts/us04.integracao.test.mjs",
     "test:us05": "node --test scripts/us05.integracao.test.mjs",
     "test:us16": "node --test scripts/us16.integracao.test.mjs",
-    "test:us18": "node --test --test-concurrency=1 scripts/us18.integracao.test.mjs",
+    "test:us19": "node --test scripts/dados-demo.test.mjs",
     "dev:agendamento": "npm run dev -w @clinica/agendamento",
     "dev:notificacao": "npm run dev -w @clinica/notificacao",
     "dev:cadastro": "npm run dev -w @clinica/cadastro",
     "dev:recepcao": "npm run dev -w @clinica/recepcao",
     "infra": "docker compose up -d rabbitmq db-agendamento db-notificacao db-cadastro",
-    "demo:popular": "node scripts/popular-demo.mjs"
+    "demo:popular": "node scripts/popular-demo.mjs",
+    "ambiente:limpo": "node scripts/ambiente-limpo.mjs"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

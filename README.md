@@ -6,7 +6,7 @@ Protótipo acadêmico (IESI · CIn/UFPE): plataforma orientada a eventos para cl
 
 ```bash
 cp .env.example .env        # ajuste CANAL_ENVIO, WHATSAPP_* e LEMBRETE_ANTECEDENCIA_MINUTOS
-docker compose up --build
+docker compose up --build --wait   # termina quando os serviços migraram e responderam
 ```
 
 O projeto aparece como `iesi-clinicadigital` no Docker Desktop. Use o comando acima sem `-p` para a execução padrão da equipe. Nomes alternativos são úteis para ambientes isolados de teste.
@@ -19,11 +19,25 @@ O projeto aparece como `iesi-clinicadigital` no Docker Desktop. Use o comando ac
 | Cadastro único (API) | http://localhost:3003 |
 | Painel do RabbitMQ | http://localhost:15672 (clinica / clinica) |
 
-Para popular a agenda com as consultas do protótipo (passa pela API, então gera eventos e lembretes reais):
+Para popular a agenda com consultas **fictícias** (passa pela API, então gera eventos, pacientes e lembretes reais):
 
 ```bash
 npm run demo:popular
 ```
+
+CPFs são inválidos por construção (`000.000.xxx`), telefones ficam na faixa não atribuída `81 9 0000-0xxx` e os nomes têm o
+sobrenome "Exemplo". O roteiro confere a propagação nos três serviços e mostra só contagens. Rodar de novo não duplica dados.
+
+### Ambiente limpo e reproduzível (US-19)
+
+```bash
+npm run ambiente:limpo            # projeto Compose isolado, portas próprias, .env.example; remove tudo ao final
+npm run ambiente:limpo -- --manter    # deixa no ar em http://localhost:18080
+```
+
+O roteiro sobe do zero, confere migrações e saúde, carrega os dados fictícios, sobe uma segunda vez sem apagar volumes e
+grava comandos, versões e resultado em `docs/evidencias/us19-ambiente-limpo.txt`. As portas do Compose são configuráveis
+(`RECEPCAO_PORTA`, `AGENDAMENTO_PORTA` etc., veja `.env.example`). Detalhes em [docs/US-19.md](docs/US-19.md).
 
 ### Roteiro da demonstração
 
