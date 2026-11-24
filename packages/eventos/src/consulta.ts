@@ -19,6 +19,13 @@ export interface PayloadConsulta {
   especialidade: string;
   /** ISO 8601. */
   inicio: string;
+  /**
+   * US-11: campo aditivo, inteiro positivo, incrementado a cada alteração da consulta
+   * (agendamento = 1, remarcação e cancelamento incrementam). Permite ao consumidor
+   * descartar eventos fora de ordem. Eventos publicados antes desta versão não o têm;
+   * nesse caso o consumidor aplica o evento normalmente, sem checagem de ordem.
+   */
+  sequencia?: number;
 }
 
 export type ConsultaAgendada = EnvelopeEvento<'consulta.agendada', PayloadConsulta>;
@@ -43,6 +50,9 @@ export function validarEventoConsulta(valor: unknown): Validacao<EventoConsulta>
   if (!ehTextoPreenchido(p.profissional)) return { ok: false, motivo: 'payload.profissional ausente' };
   if (!ehTextoPreenchido(p.especialidade)) return { ok: false, motivo: 'payload.especialidade ausente' };
   if (!ehDataValida(p.inicio)) return { ok: false, motivo: 'payload.inicio inválido' };
+  if (p.sequencia !== undefined && (!Number.isSafeInteger(p.sequencia) || (p.sequencia as number) < 1)) {
+    return { ok: false, motivo: 'payload.sequencia inválida' };
+  }
   return { ok: true, evento: valor as EventoConsulta };
 }
 
