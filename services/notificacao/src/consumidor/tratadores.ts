@@ -1,16 +1,24 @@
-import type { EventoConsulta, PacienteAtualizado } from '@clinica/eventos';
+import type { AutorizacaoContatoAlterada, EventoConsulta, PacienteAtualizado } from '@clinica/eventos';
 import type { Prisma } from '../../generated/prisma';
+import { aplicarAutorizacao } from '../autorizacoes/servico';
+import { CANAL_LEMBRETE } from '../config';
 import * as lembretes from '../lembretes/servico';
 
-/** Reação da Notificação a cada tipo de evento de consulta. */
-export async function tratarEvento(tx: Prisma.TransactionClient, evento: EventoConsulta | PacienteAtualizado): Promise<void> {
+export type EventoRecebido = EventoConsulta | PacienteAtualizado | AutorizacaoContatoAlterada;
+
+/** Reação da Notificação a cada tipo de evento recebido. */
+export async function tratarEvento(tx: Prisma.TransactionClient, evento: EventoRecebido): Promise<void> {
+  if (evento.tipo === 'paciente.autorizacao_alterada') {
+    await aplicarAutorizacao(tx, evento, CANAL_LEMBRETE);
+    return;
+  }
   if (evento.tipo === 'paciente.atualizado') {
     const { cpf, nome, telefone, revisao } = evento.payload;
     await tx.contatoPaciente.createMany({ data: { cpf, nome, telefone, revisao }, skipDuplicates: true });
     await tx.contatoPaciente.updateMany({ where: { cpf, revisao: { lt: revisao } }, data: { nome, telefone, revisao } });
     const contato = await tx.contatoPaciente.findUniqueOrThrow({ where: { cpf } });
     await tx.lembrete.updateMany({
-      where: { pacienteCpf: cpf, status: { in: ['programado', 'falhou'] } },
+      where: { pacienteCpf: cpf, status: { in: ['programado', 'falhou', 'bloqueado'] } },
       data: { pacienteNome: contato.nome, telefone: contato.telefone },
     });
     return;

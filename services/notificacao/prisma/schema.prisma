@@ -13,6 +13,8 @@ enum StatusLembrete {
   enviado
   falhou
   cancelado
+  /// Sem autorização de contato no canal (desconhecida ou revogada) no momento do envio.
+  bloqueado
 }
 
 /// Cópia local dos dados de contato necessários ao envio (vindos do evento, sem conteúdo clínico).
@@ -46,6 +48,22 @@ model ContatoPaciente {
   revisao  Int
 
   @@map("contatos_pacientes")
+}
+
+/// Cópia local da autorização de contato por CPF e canal, vinda de paciente.autorizacao_alterada.
+/// Só versão maior substitui a guardada. Sem linha, a autorização é desconhecida e o envio é bloqueado.
+model AutorizacaoContato {
+  cpf          String
+  canal        String
+  idPaciente   String   @map("id_paciente")
+  situacao     String
+  versao       Int
+  registradoEm DateTime @map("registrado_em") @db.Timestamptz(3)
+  recebidoEm   DateTime @default(now()) @map("recebido_em") @db.Timestamptz(3)
+
+  @@id([cpf, canal])
+  @@index([idPaciente])
+  @@map("autorizacoes_contato")
 }
 
 /// Idempotência do consumidor: cada id_evento é processado uma única vez.

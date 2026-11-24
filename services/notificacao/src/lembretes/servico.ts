@@ -82,7 +82,7 @@ export async function reprogramar(tx: Prisma.TransactionClient, payload: Payload
 
 export async function cancelar(tx: Prisma.TransactionClient, payload: PayloadConsulta, idEvento: string) {
   const { count } = await tx.lembrete.updateMany({
-    where: { idConsulta: payload.id_consulta, status: { in: ['programado', 'falhou'] } },
+    where: { idConsulta: payload.id_consulta, status: { in: ['programado', 'falhou', 'bloqueado'] } },
     data: { status: 'cancelado' },
   });
   await registrarAtividade(

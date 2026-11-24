@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { criarEnvelope, validarEventoConsulta, validarPacienteAtualizado } from '../dist/index.js';
+import { criarEnvelope, validarAutorizacaoContato, validarEventoConsulta, validarPacienteAtualizado } from '../dist/index.js';
 
 // Só dados fictícios.
 const consulta = (alteracoes = {}) => ({
@@ -88,4 +88,45 @@ test('US-04 CA3: motivos não carregam dados pessoais do evento', () => {
   const resultado = validarEventoConsulta(sentinela);
   assert.equal(resultado.ok, false);
   assert.doesNotMatch(resultado.motivo, /99988877766|81988887777/);
+});
+const autorizacao = (payload = {}, alteracoes = {}) => {
+  const base = criarEnvelope({
+    tipo: 'paciente.autorizacao_alterada',
+    origem: 'cadastro',
+    id_correlacao: 'paciente-p1',
+    payload: {
+      id_paciente: 'p1', cpf: '00011122233', canal: 'whatsapp', situacao: 'revogado',
+      origem_registro: 'telefone', registrado_em: '2026-11-23T10:00:00-03:00', versao: 2,
+    },
+  });
+  return { ...base, ...alteracoes, payload: { ...base.payload, ...payload } };
+};
+
+test('US-14: paciente.autorizacao_alterada v1 válido e campos aditivos aceitos', () => {
+  assert.equal(validarAutorizacaoContato(autorizacao()).ok, true);
+  assert.equal(validarAutorizacaoContato(autorizacao({ observacao: 'aditivo' })).ok, true);
+  assert.deepEqual(validarAutorizacaoContato(autorizacao({}, { versao: 2 })), {
+    ok: false, motivo: 'versão 2 não suportada para paciente.autorizacao_alterada',
+  });
+  assert.deepEqual(validarAutorizacaoContato(autorizacao({}, { origem: 'agendamento' })), {
+    ok: false, motivo: 'origem inesperada para paciente.autorizacao_alterada',
+  });
+});
+
+test('US-14: autorização sem canal, situação, origem, data ou versão válidos é recusada', () => {
+  const casos = [
+    [{ id_paciente: '' }, 'payload.id_paciente ausente'],
+    [{ cpf: '99988877766x' }, 'payload.cpf inválido'],
+    [{ canal: 'pombo' }, 'payload.canal inválido'],
+    [{ situacao: undefined }, 'payload.situacao inválida'],
+    [{ situacao: 'talvez' }, 'payload.situacao inválida'],
+    [{ origem_registro: 'adivinhado' }, 'payload.origem_registro inválida'],
+    [{ registrado_em: 'ontem' }, 'payload.registrado_em inválido'],
+    [{ versao: 0 }, 'payload.versao inválida'],
+  ];
+  for (const [payload, motivo] of casos) {
+    const resultado = validarAutorizacaoContato(autorizacao(payload));
+    assert.deepEqual(resultado, { ok: false, motivo });
+    assert.doesNotMatch(resultado.motivo, /99988877766/);
+  }
 });

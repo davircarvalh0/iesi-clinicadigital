@@ -13,6 +13,7 @@ const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
   enviado: { tom: 'sucesso', texto: 'Lembrete enviado' },
   falhou: { tom: 'perigo', texto: 'Lembrete falhou' },
   cancelado: { tom: 'neutro', texto: 'Lembrete cancelado' },
+  bloqueado: { tom: 'alerta', texto: 'Lembrete bloqueado' },
 };
 
 const TEXTO_PENDENCIA: Record<Pendencia, string> = {

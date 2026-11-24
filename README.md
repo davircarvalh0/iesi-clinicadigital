@@ -109,3 +109,10 @@ dados manualmente. Se o Cadastro estiver indisponível, é possível tentar nova
 com dados manuais. A agenda mostra o vínculo pendente até receber a confirmação por evento.
 
 O contrato e o roteiro de validação em um Compose isolado estão em [docs/US-08.md](docs/US-08.md).
+
+## Autorização de contato (US-14)
+
+Em **Pacientes → Editar cadastro**, registre por canal (WhatsApp, SMS, e-mail) a autorização ou a revogação
+informada pelo paciente, com a origem (presencial, telefone, formulário). **Sem registro não há envio**: a Notificação
+confere sua cópia da autorização antes de cada lembrete e marca *Lembrete bloqueado* quando ela é desconhecida ou
+revogada. O modal mostra se a cópia da Notificação já recebeu a última versão. Detalhes em [docs/US-14.md](docs/US-14.md).
