@@ -19,6 +19,7 @@ const fmtDataHora = new Intl.DateTimeFormat('pt-BR', {
 /** Adaptador da WhatsApp Business Cloud API (Graph API, mensagem do tipo template). */
 export class CanalWhatsApp implements CanalEnvio {
   readonly nome = 'whatsapp';
+  readonly canalContato = 'whatsapp' as const;
 
   constructor(private readonly cfg: ConfigWhatsApp) {}
 
