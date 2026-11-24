@@ -31,7 +31,10 @@ export function agendar(dados: NovaConsulta): Promise<Consulta> {
 export function remarcar(id: string, dados: Remarcacao): Promise<Consulta> {
   return prisma.$transaction(async (tx) => {
     await buscarAtiva(tx, id);
-    const consulta = await tx.consulta.update({ where: { id }, data: { inicio: dados.inicio } });
+    const consulta = await tx.consulta.update({
+      where: { id },
+      data: { inicio: dados.inicio, sequencia: { increment: 1 } },
+    });
     await registrarEvento(tx, 'consulta.reagendada', consulta);
     return consulta;
   });
@@ -40,7 +43,10 @@ export function remarcar(id: string, dados: Remarcacao): Promise<Consulta> {
 export function cancelar(id: string): Promise<Consulta> {
   return prisma.$transaction(async (tx) => {
     await buscarAtiva(tx, id);
-    const consulta = await tx.consulta.update({ where: { id }, data: { status: 'cancelada' } });
+    const consulta = await tx.consulta.update({
+      where: { id },
+      data: { status: 'cancelada', sequencia: { increment: 1 } },
+    });
     await registrarEvento(tx, 'consulta.cancelada', consulta);
     return consulta;
   });
@@ -73,5 +79,6 @@ function paraPayload(c: Consulta): PayloadConsulta {
     profissional: c.profissional,
     especialidade: c.especialidade,
     inicio: c.inicio.toISOString(),
+    sequencia: c.sequencia,
   };
 }
