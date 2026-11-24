@@ -9,7 +9,16 @@ export class ErroHttp extends Error {
 
 export const tratarErros: ErrorRequestHandler = (erro, _req, res, _next) => {
   if (erro instanceof ZodError) {
-    res.status(400).json({ erro: 'Dados inválidos', detalhes: erro.issues });
+    const motivos = [...new Set(erro.issues.map((problema) => problema.message))].join(' ');
+    res.status(400).json({ erro: `Dados inválidos. ${motivos}`, detalhes: erro.issues });
+    return;
+  }
+  if (erro?.type === 'entity.parse.failed') {
+    res.status(400).json({ erro: 'JSON inválido' });
+    return;
+  }
+  if (erro?.type === 'entity.too.large') {
+    res.status(413).json({ erro: 'Dados da requisição excedem o limite.' });
     return;
   }
   if (erro instanceof ErroHttp) {

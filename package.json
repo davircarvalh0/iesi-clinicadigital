@@ -19,6 +19,7 @@
     "test:us05": "node --test scripts/us05.integracao.test.mjs",
     "test:us06": "node --test scripts/us06.integracao.test.mjs",
     "test:us16": "node --test scripts/us16.integracao.test.mjs",
+    "test:us17": "node --test scripts/us17.integracao.test.mjs",
     "test:us19": "node --test scripts/dados-demo.test.mjs",
     "dev:agendamento": "npm run dev -w @clinica/agendamento",
     "dev:notificacao": "npm run dev -w @clinica/notificacao",
