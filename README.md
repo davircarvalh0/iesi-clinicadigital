@@ -30,6 +30,7 @@ npm run demo:popular
 - **Caminho feliz:** "Nova consulta" → o feed mostra *Evento publicado* (Agendamento) e *Lembrete programado* (Notificação); no horário, *Lembrete enviado*.
 - **Cancelar / Remarcar:** o selo do lembrete muda sozinho para *cancelado* ou é reprogramado.
 - **Notificação fora do ar:** desligue o interruptor do "Modo demonstração", faça alterações (o contador de eventos na fila sobe) e religue: a fila é processada. Também funciona com `docker compose stop notificacao`.
+- **Falhas e sincronização (US-18):** a faixa abaixo do título mostra cada serviço com o horário da última atualização. Com o consumo pausado, cancele ou remarque: a consulta mostra *Sincronização pendente* até a Notificação processar. Com a Notificação parada, os lembretes aparecem como *situação desconhecida*. Detalhes em [docs/US-18.md](docs/US-18.md).
 - **Evento duplicado:** "Reenviar último evento" publica de novo o mesmo `id_evento`; o feed mostra *Evento duplicado ignorado*.
 
 ### Desenvolvimento local (sem containers para os serviços)

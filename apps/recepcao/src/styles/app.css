@@ -235,6 +235,25 @@ button.chip:hover { filter: brightness(0.96); }
 .dialogo-contato .modal { width: 100%; }
 a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); outline-offset: 3px; }
 
+/* ---------- Sincronização (US-18) ---------- */
+.sincronizacao { display: flex; flex-direction: column; gap: 8px; }
+.sincronizacao__lista { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.sincronizacao__item { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px;
+  font-size: 13px; font-variant-numeric: tabular-nums; color: var(--neutro); background: var(--neutro-fundo); }
+.sincronizacao__item--sucesso { color: var(--sucesso); background: var(--sucesso-fundo); }
+.sincronizacao__item--alerta { color: var(--alerta); background: var(--alerta-fundo); }
+.sincronizacao__item--perigo { color: var(--perigo); background: var(--perigo-fundo); }
+.sincronizacao__pendentes { font-size: 13.5px; color: var(--alerta); }
+.sincronizacao__pendentes:empty { display: none; }
+.consulta__selos { flex-wrap: wrap; justify-content: flex-end; }
+.consulta__aviso { max-width: 340px; font-size: 12.5px; line-height: 1.4; color: var(--alerta); text-align: right; }
+.consulta__resultado { max-width: 340px; padding: 6px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; text-align: right; }
+.consulta__resultado--ok { color: var(--sucesso); background: var(--sucesso-fundo); }
+.consulta__resultado--erro { color: var(--perigo); background: var(--perigo-fundo); }
+.consulta__resultado--alerta { color: var(--alerta); background: var(--alerta-fundo); }
+.acao:disabled { opacity: 0.5; cursor: default; text-decoration: none; }
+.demo__erro { margin-top: 10px; font-size: 13px; }
+
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulsar { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.4); opacity: 0; } }
 
@@ -258,4 +277,6 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); o
   .indicadores { grid-template-columns: 1fr; }
   .consulta { grid-template-columns: 48px 2px 40px minmax(0, 1fr); }
   .consulta > .consulta__lateral { grid-column: 1 / -1; grid-row: 2; align-items: flex-start; margin-top: 12px; }
+  .consulta__selos { justify-content: flex-start; }
+  .consulta__aviso, .consulta__resultado { text-align: left; }
 }
