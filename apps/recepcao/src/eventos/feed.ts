@@ -31,6 +31,8 @@ const ATIVIDADES: Record<string, { titulo: string; tom: TomSelo }> = {
   'evento.rejeitado': { titulo: 'Evento enviado à fila de erros', tom: 'perigo' },
   'consumo.pausado': { titulo: 'Notificação fora do ar', tom: 'perigo' },
   'consumo.retomado': { titulo: 'Notificação de volta ao ar', tom: 'sucesso' },
+  'reprocessamento.solicitado': { titulo: 'Reprocessamento solicitado', tom: 'marca' },
+  'reprocessamento.falhou': { titulo: 'Reprocessamento não confirmado', tom: 'perigo' },
 };
 
 /** Junta o que o Agendamento publicou e o que a Notificação fez numa linha do tempo única. */
