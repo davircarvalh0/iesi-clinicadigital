@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { cadastroApi, type Paciente, type PacienteDetalhe } from '../api/cadastro';
+import { cadastroApi, type CanalContato, type Paciente, type PacienteDetalhe } from '../api/cadastro';
 import { ErroApi } from '../api/http';
 import { mascaraCpf, mascaraTelefone } from '../formatacao';
+import { AutorizacoesContato, NOME_CANAL } from './AutorizacoesContato';
 
 interface Props {
   paciente: Paciente;
@@ -16,6 +17,7 @@ export function ModalContato({ paciente, aoFechar, aoSalvar, aoRecarregar }: Pro
   const [email, setEmail] = useState(paciente.email ?? '');
   const [nascimento, setNascimento] = useState('');
   const [convenio, setConvenio] = useState('');
+  const [canalPreferido, setCanalPreferido] = useState<CanalContato | ''>('');
   const [detalhe, setDetalhe] = useState<PacienteDetalhe | null>(null);
   const [falhaDetalhe, setFalhaDetalhe] = useState(false);
   const [tentativa, setTentativa] = useState(0);
@@ -35,6 +37,7 @@ export function ModalContato({ paciente, aoFechar, aoSalvar, aoRecarregar }: Pro
       setEmail(dados.email ?? '');
       setNascimento(dados.nascimento ?? '');
       setConvenio(dados.convenio ?? '');
+      setCanalPreferido(dados.canalPreferido ?? '');
       setDetalhe(dados);
     }).catch(() => {
       if (!controle.signal.aborted) setFalhaDetalhe(true);
@@ -51,7 +54,7 @@ export function ModalContato({ paciente, aoFechar, aoSalvar, aoRecarregar }: Pro
     try {
       const salvo = await cadastroApi.atualizar(paciente.id, {
         telefone: digitos, email: email.trim() || null, nascimento: nascimento || null,
-        convenio: convenio.trim() || null, revisao: detalhe.revisao,
+        convenio: convenio.trim() || null, canalPreferido: canalPreferido || null, revisao: detalhe.revisao,
       });
       aoSalvar(salvo);
     } catch (e) {
@@ -80,12 +83,26 @@ export function ModalContato({ paciente, aoFechar, aoSalvar, aoRecarregar }: Pro
           <input type="text" maxLength={120} value={convenio}
             disabled={salvando || conflito} onChange={(e) => setConvenio(e.target.value)} />
         </label>
+        <label className="campo campo--inteiro">Canal preferido (opcional)
+          <select value={canalPreferido} disabled={salvando || conflito}
+            onChange={(e) => setCanalPreferido(e.target.value as CanalContato | '')}>
+            <option value="">Não informado</option>
+            {Object.entries(NOME_CANAL).map(([valor, nome]) => <option key={valor} value={valor}>{nome}</option>)}
+          </select>
+        </label>
+        {canalPreferido && detalhe.autorizacoes.find((a) => a.canal === canalPreferido)?.situacao !== 'autorizado' && (
+          <p className="aviso campo--inteiro" role="status">
+            O canal preferido não tem autorização registrada: nenhum contato será feito por ele.
+          </p>
+        )}
         </>}
         <label className="campo campo--inteiro">E-mail (opcional)
           <input type="email" autoComplete="email" maxLength={254} value={email}
             disabled={salvando || conflito} onChange={(e) => setEmail(e.target.value)} />
         </label>
         {erro && <p className="aviso aviso--erro campo--inteiro" role="alert">{erro}</p>}
+        {detalhe && <AutorizacoesContato idPaciente={paciente.id} autorizacoes={detalhe.autorizacoes} desabilitado={salvando}
+          aoAlterar={(autorizacoes) => setDetalhe((atual) => atual && { ...atual, autorizacoes })} />}
         <div className="modal__acoes">
           <button type="button" className="botao botao--secundario" disabled={salvando} onClick={aoFechar}>Cancelar</button>
           {falhaDetalhe && <button type="button" className="botao botao--primario"

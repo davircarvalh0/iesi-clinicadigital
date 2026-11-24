@@ -9,6 +9,7 @@ const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
   enviado: { tom: 'sucesso', texto: 'Lembrete enviado' },
   falhou: { tom: 'perigo', texto: 'Lembrete falhou' },
   cancelado: { tom: 'neutro', texto: 'Lembrete cancelado' },
+  bloqueado: { tom: 'alerta', texto: 'Lembrete bloqueado' },
 };
 
 /** Alterna os tons do avatar de forma estável pelo nome. */
@@ -49,7 +50,7 @@ export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: 
           {selo ? (
             <span title={lembrete?.motivoFalha ?? undefined}>
               <Selo tom={selo.tom}>
-                {lembrete?.status === 'cancelado' ? <BellOff size={13} /> : <Bell size={13} />} {selo.texto}
+                {lembrete?.status === 'cancelado' || lembrete?.status === 'bloqueado' ? <BellOff size={13} /> : <Bell size={13} />} {selo.texto}
               </Selo>
             </span>
           ) : (
@@ -58,6 +59,9 @@ export function ItemConsulta({ consulta: c, lembrete, aoRemarcar, aoCancelar }: 
             </Selo>
           )}
         </div>
+        {lembrete?.status === 'bloqueado' && lembrete.motivoFalha && (
+          <span className="consulta__aviso">Sem envio: {lembrete.motivoFalha}</span>
+        )}
         {c.vinculoPacientePendente && <Selo tom="alerta">Vínculo com Cadastro pendente</Selo>}
         {!cancelada && (
           <div className="consulta__acoes">

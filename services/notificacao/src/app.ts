@@ -1,5 +1,6 @@
 import express from 'express';
 import { rotasAtividades } from './atividades/rotas';
+import { rotasAutorizacoes } from './autorizacoes/rotas';
 import { rotasDemo } from './demo/rotas';
 import { tratarErros } from './http/erros';
 import { rotasLembretes } from './lembretes/rotas';
@@ -13,6 +14,7 @@ export function criarApp() {
   });
   app.use('/lembretes', rotasLembretes);
   app.use('/atividades', rotasAtividades);
+  app.use('/autorizacoes', rotasAutorizacoes);
   app.use('/demo', rotasDemo);
 
   app.use(tratarErros);

@@ -1,5 +1,6 @@
 import type { Lembrete } from '../../generated/prisma';
 import { mascararDados, registrarAtividade } from '../atividades/registro';
+import { verificarAutorizacao } from '../autorizacoes/servico';
 import type { CanalEnvio } from '../canais';
 import { paraFormatoInternacional } from '../canais/telefone';
 import { prisma } from '../db';
@@ -40,6 +41,17 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
   const telefone = paraFormatoInternacional(lembrete.telefone);
   const base = { idConsulta: lembrete.idConsulta };
   let ultimoErro = '';
+
+  // US-14: a cópia local da autorização é consultada a cada envio; desconhecida ou revogada bloqueia.
+  const autorizacao = await verificarAutorizacao(lembrete.pacienteCpf, canal.canalContato);
+  if (!autorizacao.permitido) {
+    const { count } = await prisma.lembrete.updateMany({
+      where: { id: lembrete.id, status: 'programado' },
+      data: { status: 'bloqueado', motivoFalha: autorizacao.motivo },
+    });
+    if (count) await registrarAtividade({ ...base, acao: 'lembrete.bloqueado', descricao: `lembrete não enviado: ${autorizacao.motivo}` });
+    return;
+  }
 
   for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
     try {

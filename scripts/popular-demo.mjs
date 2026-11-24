@@ -1,6 +1,10 @@
 // Popula a agenda com as consultas do protótipo, passando pela API (gera eventos e lembretes de verdade).
 // Uso: npm run demo:popular   (com o docker compose no ar)
 const BASE = process.env.AGENDAMENTO_URL ?? 'http://localhost:8080/api/agendamento';
+const CADASTRO = process.env.CADASTRO_URL ?? 'http://localhost:8080/api/cadastro';
+
+// US-14: só quem autorizou WhatsApp recebe lembrete. João Pedro fica sem registro para mostrar o bloqueio.
+const SEM_AUTORIZACAO = new Set(['34567890122']);
 
 const dia = (n) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Recife' }).format(new Date(Date.now() + n * 86_400_000));
 const em = (n, hora) => `${dia(n)}T${hora}:00-03:00`;
@@ -34,4 +38,23 @@ for (const { cancelar, ...dados } of CONSULTAS) {
     await chamar(`/consultas/${consulta.id}`, { method: 'DELETE' });
     console.log(`cancelada: ${dados.nome}`);
   }
+}
+
+for (const cpf of new Set(CONSULTAS.map((c) => c.cpf))) {
+  if (SEM_AUTORIZACAO.has(cpf)) continue;
+  let paciente = null;
+  for (let i = 0; i < 40 && !paciente; i++) {
+    const r = await fetch(`${CADASTRO}/pacientes/busca-cpf`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cpf }),
+    });
+    paciente = r.ok ? (await r.json()).paciente : null;
+    if (!paciente) await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!paciente) { console.warn('paciente ainda não chegou ao Cadastro; autorização não registrada'); continue; }
+  const r = await fetch(`${CADASTRO}/pacientes/${paciente.id}/autorizacoes`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ canal: 'whatsapp', situacao: 'autorizado', origem: 'presencial' }),
+  });
+  if (!r.ok) throw new Error(`autorização: HTTP ${r.status}`);
+  console.log(`WhatsApp autorizado: ${paciente.nome}`);
 }

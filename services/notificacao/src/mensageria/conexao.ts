@@ -1,5 +1,6 @@
 import amqp, { type ChannelModel } from 'amqplib';
 import {
+  BINDING_AUTORIZACAO,
   BINDING_NOTIFICACAO,
   BINDING_PACIENTE,
   EXCHANGE_ERROS,
@@ -33,6 +34,7 @@ export async function abrirCanalConsumo(conexao: ChannelModel) {
   await canal.assertQueue(FILA_NOTIFICACAO_ERROS, { durable: true });
   await canal.bindQueue(FILA_NOTIFICACAO, EXCHANGE_EVENTOS, BINDING_NOTIFICACAO);
   await canal.bindQueue(FILA_NOTIFICACAO, EXCHANGE_EVENTOS, BINDING_PACIENTE);
+  await canal.bindQueue(FILA_NOTIFICACAO, EXCHANGE_EVENTOS, BINDING_AUTORIZACAO);
   await canal.bindQueue(FILA_NOTIFICACAO_ERROS, EXCHANGE_ERROS, '');
   await canal.prefetch(1);
   return canal;
