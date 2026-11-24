@@ -7,7 +7,11 @@ const fmtHoraDoDia = new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hourCyc
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
+const fmtHoraSegundos = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: FUSO });
+
 export const hora = (iso: string) => fmtHora.format(new Date(iso));
+/** Ex.: "14:03:12" (horário da última atualização). */
+export const horaComSegundos = (ms: number) => fmtHoraSegundos.format(new Date(ms));
 export const diaPorExtenso = (data: Date) => fmtDia.format(data);
 /** AAAA-MM-DD no fuso de Recife, para agrupar consultas por dia. */
 export const chaveDia = (data: Date) => fmtChaveDia.format(data);

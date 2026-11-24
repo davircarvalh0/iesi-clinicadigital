@@ -1,6 +1,7 @@
 import { Copy } from 'lucide-react';
 import { useState } from 'react';
 import { agendamentoApi } from '../api/agendamento';
+import { descreverFalha } from '../api/http';
 import { notificacaoApi } from '../api/notificacao';
 import type { EstadoConsumo, EventoPublicado } from '../tipos';
 
@@ -13,17 +14,21 @@ interface Props {
 
 export function ModoDemonstracao({ consumo, acessivel, eventos, aoMudar }: Props) {
   const [ocupado, setOcupado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   const noAr = acessivel && consumo?.consumindo !== false;
   const ultimo = eventos.find((e) => !e.duplicado && e.publicadoEm);
 
-  const executar = async (acao: () => Promise<unknown>) => {
+  const executar = async (acao: () => Promise<unknown>, descricao: string) => {
     setOcupado(true);
+    setErro(null);
     try {
       await acao();
-      await aoMudar();
+    } catch (e) {
+      setErro(descreverFalha(e, descricao));
     } finally {
       setOcupado(false);
     }
+    await aoMudar();
   };
 
   const subtitulo = !acessivel
@@ -48,7 +53,7 @@ export function ModoDemonstracao({ consumo, acessivel, eventos, aoMudar }: Props
             role="switch"
             checked={noAr}
             disabled={!acessivel || ocupado}
-            onChange={(e) => executar(() => notificacaoApi.definirConsumo(e.target.checked))}
+            onChange={(e) => { const ativo = e.target.checked; void executar(() => notificacaoApi.definirConsumo(ativo), ativo ? 'a retomada do consumo' : 'a pausa do consumo'); }}
           />
           <span className="interruptor__trilho" />
         </label>
@@ -57,10 +62,11 @@ export function ModoDemonstracao({ consumo, acessivel, eventos, aoMudar }: Props
       <button
         className="demo__reenviar"
         disabled={!ultimo || ocupado}
-        onClick={() => executar(agendamentoApi.reenviarUltimoEvento)}
+        onClick={() => void executar(agendamentoApi.reenviarUltimoEvento, 'o reenvio do evento')}
       >
         <Copy size={17} /> Reenviar último evento (duplicado)
       </button>
+      {erro && <p className="aviso aviso--erro demo__erro" role="alert">{erro}</p>}
       <p className="demo__legenda">
         {ultimo ? `Último: ${ultimo.tipo} · ${ultimo.pacienteNome}` : 'Publique um evento de consulta primeiro.'}
       </p>

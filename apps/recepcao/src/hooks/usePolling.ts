@@ -1,36 +1,39 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Leitura } from '../sincronizacao';
+import { criarFilaRecarga } from './filaRecarga';
 
-/** Busca `carregar` agora e a cada `intervaloMs`. `recarregar` força uma busca imediata. */
-export function usePolling<T>(carregar: () => Promise<T>, intervaloMs: number) {
-  const [dados, setDados] = useState<T | undefined>(undefined);
-  const [erro, setErro] = useState<Error | null>(null);
+export interface RecursoPolling<T> extends Leitura<T> {
+  /** Busca agora, mesmo com outra busca em curso (que pode ser anterior a uma gravação). */
+  recarregar: () => Promise<void>;
+}
+
+/**
+ * Busca `carregar` agora e a cada `intervaloMs`. Em caso de erro, mantém os últimos dados com
+ * `atualizadoEm` (início da última busca bem-sucedida), para a tela mostrar que estão desatualizados.
+ */
+export function usePolling<T>(carregar: () => Promise<T>, intervaloMs: number): RecursoPolling<T> {
+  const [leitura, setLeitura] = useState<Leitura<T>>({ erro: null, atualizadoEm: null });
   const carregarRef = useRef(carregar);
-  const pendente = useRef<Promise<void> | null>(null);
   const ativo = useRef(true);
   carregarRef.current = carregar;
 
-  const recarregar = useCallback(() => {
-    // Não sobrepõe pedidos: uma resposta antiga não pode desfazer o estado mais novo.
-    if (pendente.current) return pendente.current;
-    const pedido = (async () => {
-      try {
-        const resultado = await carregarRef.current();
-        if (ativo.current) { setDados(resultado); setErro(null); }
-      } catch (e) {
-        if (ativo.current) setErro(e as Error);
-      }
-    })();
-    pendente.current = pedido;
-    void pedido.finally(() => { pendente.current = null; });
-    return pedido;
-  }, []);
+  const fila = useMemo(() => criarFilaRecarga(async () => {
+    // O início da busca é o limite seguro: o dado reflete o servidor em algum ponto depois dele.
+    const inicio = Date.now();
+    try {
+      const dados = await carregarRef.current();
+      if (ativo.current) setLeitura({ dados, erro: null, atualizadoEm: inicio });
+    } catch (e) {
+      if (ativo.current) setLeitura((atual) => ({ ...atual, erro: e instanceof Error ? e : new Error(String(e)) }));
+    }
+  }), []);
 
   useEffect(() => {
     ativo.current = true;
-    void recarregar();
-    const timer = setInterval(recarregar, intervaloMs);
+    void fila.periodica();
+    const timer = setInterval(() => void fila.periodica(), intervaloMs);
     return () => { ativo.current = false; clearInterval(timer); };
-  }, [recarregar, intervaloMs]);
+  }, [fila, intervaloMs]);
 
-  return { dados, erro, recarregar };
+  return { ...leitura, recarregar: fila.forcada };
 }
