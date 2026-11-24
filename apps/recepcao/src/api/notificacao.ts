@@ -1,4 +1,4 @@
-import type { Atividade, EstadoConsumo, Lembrete, PaginaLembretes } from '../tipos';
+import type { Atividade, EstadoConsumo, Lembrete, PaginaLembretes, TrilhaLembrete } from '../tipos';
 import { requisitar } from './http';
 
 const BASE = '/api/notificacao';
@@ -12,6 +12,12 @@ export const notificacaoApi = {
   painel: (consulta: string, signal?: AbortSignal) =>
     requisitar<PaginaLembretes>(
       `${BASE}/lembretes/painel?${consulta}`,
+      signal ? { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) } : {},
+    ),
+  /** Trilha de um lembrete: atividades e tentativas de envio (US-13). */
+  trilha: (idConsulta: string, signal?: AbortSignal) =>
+    requisitar<TrilhaLembrete>(
+      `${BASE}/lembretes/${encodeURIComponent(idConsulta)}/trilha`,
       signal ? { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) } : {},
     ),
   /** Cópia da autorização que a Notificação usa no envio (US-14). */

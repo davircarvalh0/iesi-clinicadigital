@@ -239,12 +239,13 @@ button.chip:hover { filter: brightness(0.96); }
 .lembretes__grupo .chip:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
 .lembretes__aviso { margin: 0 20px 12px; }
 .lembretes__lista { list-style: none; padding: 0; margin: 0; }
-.lembrete { display: flex; gap: 16px; padding: 18px 20px; align-items: flex-start; border-top: 1px solid var(--borda-suave); }
+.lembrete { padding: 18px 20px; border-top: 1px solid var(--borda-suave); }
+.lembrete__linha { display: flex; gap: 16px; align-items: flex-start; }
 .lembrete__quando { display: flex; flex-direction: column; min-width: 92px; font-size: 13px; color: var(--texto-suave); }
 .lembrete__quando time { font-size: 18px; font-weight: 700; color: var(--texto); }
 .lembrete__motivo { color: var(--perigo); }
 .lembrete__selos { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
-@media (max-width: 720px) { .lembrete { flex-wrap: wrap; } .lembrete__selos { align-items: flex-start; } }
+@media (max-width: 720px) { .lembrete__linha { flex-wrap: wrap; } .lembrete__selos { align-items: flex-start; } }
 .dialogo-contato { border: 0; padding: 0; border-radius: 20px; width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 32px); color: var(--texto); }
 .dialogo-contato::backdrop { background: rgba(26, 48, 46, 0.32); backdrop-filter: blur(6px); }
 .dialogo-contato .modal { width: 100%; }
@@ -310,3 +311,15 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); o
   .consulta__selos { justify-content: flex-start; }
   .consulta__aviso, .consulta__resultado { text-align: left; }
 }
+
+/* ---------- Trilha do lembrete (US-13) ---------- */
+.trilha { margin: 14px 0 0 108px; padding: 14px 16px; border-radius: 12px; background: var(--fundo-claro); border: 1px solid var(--borda-suave); }
+.trilha__resumo { font-size: 13px; color: var(--texto-suave); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.trilha__estado { margin: 12px 0 0 108px; font-size: 13px; color: var(--texto-suave); display: flex; gap: 10px; align-items: center; }
+.trilha__lista { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.trilha__item { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; font-size: 13px; }
+.trilha__item time { color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.trilha__item > div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.trilha__item--tentativa .selo { font-weight: 700; }
+.trilha__detalhe { color: var(--texto-medio); overflow-wrap: anywhere; }
+@media (max-width: 720px) { .trilha, .trilha__estado { margin-left: 0; } .trilha__item { grid-template-columns: 1fr; gap: 4px; } }

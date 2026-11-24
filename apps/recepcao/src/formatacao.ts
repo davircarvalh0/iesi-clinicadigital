@@ -67,3 +67,7 @@ export function mascaraTelefone(v: string): string {
 
 /** Junta data (AAAA-MM-DD) e hora (HH:MM) de inputs em ISO 8601 com o fuso de Recife. */
 export const isoRecife = (data: string, hora: string) => `${data}T${hora}:00-03:00`;
+
+/** Ex.: "23/10 às 10:00:05" (trilha de envio, US-13). */
+export const dataHoraComSegundos = (iso: string) =>
+  `${fmtDiaMes.format(new Date(iso))} às ${fmtHoraSegundos.format(new Date(iso))}`;

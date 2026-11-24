@@ -1,5 +1,5 @@
 // US-09: listagem dedicada de lembretes, com filtro por situação e período.
-import { Bell, BellOff, RefreshCw } from 'lucide-react';
+import { Bell, BellOff, History, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { notificacaoApi } from '../api/notificacao';
 import { Selo } from '../componentes/Selo';
@@ -13,6 +13,7 @@ import {
   type FiltroLembretes, type Periodo,
 } from './filtros';
 import { descreverModo, NOME_SITUACAO, ORDEM_SITUACOES, SELO_LEMBRETE } from './rotulos';
+import { TrilhaLembrete } from './TrilhaLembrete';
 
 const INTERVALO_MS = 5000;
 const LIMITE_ATRASO_MS = 15_000;
@@ -127,35 +128,44 @@ export function PainelLembretes({ filtro, leitura, consulta, agora, aoMudarFiltr
   );
 }
 
-function ItemLembrete({ lembrete: l }: { lembrete: ItemPainelLembrete }) {
+export function ItemLembrete({ lembrete: l, trilhaAberta = false }: { lembrete: ItemPainelLembrete; trilhaAberta?: boolean }) {
   const selo = SELO_LEMBRETE[l.status];
   const concluido = l.enviadoEm !== null;
+  const [aberta, setAberta] = useState(trilhaAberta);
+  const idTrilha = `trilha-${l.id}`;
   return (
     <li className="lembrete">
-      <div className="lembrete__quando">
-        <time dateTime={l.inicioConsulta}>{hora(l.inicioConsulta)}</time>
-        <span>{rotuloDia(l.inicioConsulta).split(' · ')[0]}</span>
+      <div className="lembrete__linha">
+        <div className="lembrete__quando">
+          <time dateTime={l.inicioConsulta}>{hora(l.inicioConsulta)}</time>
+          <span>{rotuloDia(l.inicioConsulta).split(' · ')[0]}</span>
+        </div>
+        <div className="paciente__dados">
+          <h3>{l.pacienteNome}</h3>
+          <span>{l.profissional} · {l.especialidade}</span>
+          <span>
+            {concluido ? `Concluído em ${dataHora(l.enviadoEm!)}` : `Previsto para ${dataHora(l.enviarEm)}`}
+            {' · '}{descreverModo(l)}
+            {l.tentativas > 0 && ` · ${l.tentativas} tentativa(s)`}
+          </span>
+          {l.motivoFalha && <span className="lembrete__motivo">{l.motivoFalha}</span>}
+          {l.idExterno && <span>Identificador do provedor: {l.idExterno}</span>}
+        </div>
+        <div className="lembrete__selos">
+          <Selo tom={selo.tom}>
+            {l.status === 'cancelado' ? <BellOff size={13} aria-hidden="true" /> : <Bell size={13} aria-hidden="true" />}
+            {' '}{selo.texto}
+          </Selo>
+          {l.antecedenciaMinutos != null && l.antecedenciaMinutos < 1440 && (
+            <Selo tom="alerta">Demonstração · {l.antecedenciaMinutos} min</Selo>
+          )}
+          <button type="button" className="acao" aria-expanded={aberta} aria-controls={idTrilha}
+            onClick={() => setAberta((v) => !v)}>
+            <History size={15} aria-hidden="true" /> {aberta ? 'Ocultar trilha' : 'Ver trilha'}
+          </button>
+        </div>
       </div>
-      <div className="paciente__dados">
-        <h3>{l.pacienteNome}</h3>
-        <span>{l.profissional} · {l.especialidade}</span>
-        <span>
-          {concluido ? `Concluído em ${dataHora(l.enviadoEm!)}` : `Previsto para ${dataHora(l.enviarEm)}`}
-          {' · '}{descreverModo(l)}
-          {l.tentativas > 0 && ` · ${l.tentativas} tentativa(s)`}
-        </span>
-        {l.motivoFalha && <span className="lembrete__motivo">{l.motivoFalha}</span>}
-        {l.idExterno && <span>Identificador do provedor: {l.idExterno}</span>}
-      </div>
-      <div className="lembrete__selos">
-        <Selo tom={selo.tom}>
-          {l.status === 'cancelado' ? <BellOff size={13} aria-hidden="true" /> : <Bell size={13} aria-hidden="true" />}
-          {' '}{selo.texto}
-        </Selo>
-        {l.antecedenciaMinutos != null && l.antecedenciaMinutos < 1440 && (
-          <Selo tom="alerta">Demonstração · {l.antecedenciaMinutos} min</Selo>
-        )}
-      </div>
+      {aberta && <div id={idTrilha}><TrilhaLembrete idConsulta={l.idConsulta} /></div>}
     </li>
   );
 }
