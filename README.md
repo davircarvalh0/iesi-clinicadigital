@@ -117,3 +117,12 @@ Quando a antecedência já passou, uma consulta futura pode receber o lembrete n
 Consultas iniciadas têm o lembrete descartado com o motivo registrado.
 
 Consulte a [política de antecedência](docs/US-10.md) e o [contrato dos resultados de envio](docs/US-12.md).
+
+## Evitar envio obsoleto após cancelamento ou remarcação (US-11)
+
+Cancelar uma consulta antes do envio garante que o lembrete nunca chegue a ser enviado. Eventos
+fora de ordem (reentregas atrasadas) não reativam um cancelamento nem desfazem uma remarcação mais
+recente. Um envio já em andamento quando chega um cancelamento conclui normalmente — o resultado
+real nunca é ocultado como cancelamento bem-sucedido.
+
+As regras de sequência, a reserva de envio e os limites conhecidos estão em [docs/US-11.md](docs/US-11.md).

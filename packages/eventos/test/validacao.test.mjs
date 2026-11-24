@@ -83,6 +83,14 @@ test('US-04: paciente.atualizado mantém as regras anteriores', () => {
   assert.deepEqual(validarPacienteAtualizado(consulta()), { ok: false, motivo: 'tipo não suportado: consulta.agendada' });
 });
 
+test('US-11: sequência é opcional, mas quando presente precisa ser inteiro >= 1', () => {
+  assert.equal(validarEventoConsulta(consulta()).ok, true);
+  assert.equal(validarEventoConsulta(comPayload(consulta(), { sequencia: 1 })).ok, true);
+  for (const sequencia of [0, -1, 1.5, 'a']) {
+    assert.deepEqual(validarEventoConsulta(comPayload(consulta(), { sequencia })), { ok: false, motivo: 'payload.sequencia inválida' });
+  }
+});
+
 test('US-04 CA3: motivos não carregam dados pessoais do evento', () => {
   const sentinela = comPayload(consulta(), { paciente: { cpf: '99988877766', nome: 'X', telefone: '81988887777' } });
   const resultado = validarEventoConsulta(sentinela);
