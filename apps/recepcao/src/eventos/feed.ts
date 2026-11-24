@@ -21,6 +21,8 @@ const ATIVIDADES: Record<string, { titulo: string; tom: TomSelo }> = {
   'lembrete.reprogramado': { titulo: 'Lembrete reprogramado', tom: 'marca' },
   'lembrete.expirado': { titulo: 'Lembrete descartado', tom: 'neutro' },
   'lembrete.cancelado': { titulo: 'Lembrete cancelado', tom: 'neutro' },
+  'lembrete.evento_obsoleto': { titulo: 'Evento fora de ordem ignorado', tom: 'neutro' },
+  'lembrete.corrida_envio': { titulo: 'Corrida com envio em andamento', tom: 'alerta' },
   'lembrete.enviado': { titulo: 'Resultado de envio sem classificação', tom: 'neutro' },
   'lembrete.simulado': { titulo: 'Envio simulado', tom: 'neutro' },
   'lembrete.aceito_provedor': { titulo: 'Aceito pelo WhatsApp', tom: 'sucesso' },

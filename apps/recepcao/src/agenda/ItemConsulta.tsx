@@ -6,6 +6,7 @@ import type { Consulta, Lembrete, StatusLembrete } from '../tipos';
 
 const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
   programado: { tom: 'marca', texto: 'Lembrete programado' },
+  enviando: { tom: 'alerta', texto: 'Envio em andamento' },
   enviado: { tom: 'neutro', texto: 'Resultado de envio sem classificação' },
   simulado: { tom: 'neutro', texto: 'Envio simulado' },
   aceito_provedor: { tom: 'sucesso', texto: 'Aceito pelo WhatsApp' },

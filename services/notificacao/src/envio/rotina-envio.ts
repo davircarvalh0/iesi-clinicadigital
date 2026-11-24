@@ -80,11 +80,29 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
       return;
     }
 
+    // US-11: reserva o lembrete (programado -> enviando) antes de chamar o canal, condicionada à
+    // programação e tentativas lidas acima. Só quem reserva chama o canal; um cancelamento ou
+    // remarcação concorrente, ao encontrar 'enviando', não reverte o resultado do envio em curso
+    // (ver lembretes/servico.ts).
     const tentativas = atual.tentativas + 1;
+    const reserva = await prisma.lembrete.updateMany({ where: { ...programacao, tentativas: atual.tentativas }, data: { status: 'enviando' } });
+    if (!reserva.count) return; // o estado mudou entre a leitura e a reserva (ou outra execução já a tomou)
+
     const tentativa = await tentarEnvio(canal, atual);
+
+    // Só grava o resultado se este processo ainda detiver a reserva: preserva a verdade do envio
+    // já realizado mesmo que um cancelamento tenha chegado durante a chamada ao canal.
+    async function finalizarReserva(id: string, dados: Prisma.LembreteUpdateManyMutationInput, atividade: DadosAtividade) {
+      return prisma.$transaction(async (tx) => {
+        const { count } = await tx.lembrete.updateMany({ where: { id, status: 'enviando' }, data: dados });
+        if (count) await registrarAtividade(atividade, tx);
+        return count > 0;
+      });
+    }
+
     if (tentativa.ok) {
       const resultado = tentativa.resultado;
-      await registrarResultado(atual, { ...resultado, enviadoEm: new Date(), tentativas, motivoFalha: null }, {
+      await finalizarReserva(atual.id, { ...resultado, enviadoEm: new Date(), tentativas, motivoFalha: null }, {
         ...base,
         acao: resultado.status === 'simulado' ? 'lembrete.simulado' : 'lembrete.aceito_provedor',
         descricao: resultado.status === 'simulado'
@@ -95,7 +113,8 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
     }
 
     const novaTentativa = tentativas < maxTentativas;
-    const registrado = await registrarResultado(atual,
+    const registrado = await finalizarReserva(
+      atual.id,
       {
         status: novaTentativa ? 'programado' : 'falhou',
         canalEnvio: canal.nome,
