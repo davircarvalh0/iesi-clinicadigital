@@ -22,6 +22,7 @@
     "test:us11": "node --test scripts/us11.integracao.test.mjs",
     "test:us13": "node --test scripts/us13.integracao.test.mjs",
     "test:us14": "node --test scripts/us14.integracao.test.mjs",
+    "test:us15": "node --test scripts/us15.integracao.test.mjs",
     "test:us16": "node --test scripts/us16.integracao.test.mjs",
     "test:us17": "node --test scripts/us17.integracao.test.mjs",
     "test:us18": "node --test scripts/us18.integracao.test.mjs",

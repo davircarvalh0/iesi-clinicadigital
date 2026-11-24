@@ -3,6 +3,7 @@ import { rotasAtividades } from './atividades/rotas';
 import { rotasAutorizacoes } from './autorizacoes/rotas';
 import { config } from './config';
 import { rotasDemo } from './demo/rotas';
+import { rotasEnvio } from './envio/rotas';
 import { tratarErros } from './http/erros';
 import { rotasLembretes } from './lembretes/rotas';
 import { rotasOperacao } from './reprocessamento/rotas';
@@ -15,6 +16,7 @@ export function criarApp() {
     res.json({ servico: 'notificacao', status: 'ok' });
   });
   app.use('/lembretes', rotasLembretes);
+  app.use('/envio', rotasEnvio);
   app.use('/atividades', rotasAtividades);
   app.use('/autorizacoes', rotasAutorizacoes);
   app.use('/demo', rotasDemo);

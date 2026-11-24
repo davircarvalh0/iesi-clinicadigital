@@ -10,6 +10,8 @@ const whatsapp = {
   template: 'hello_world',
   idioma: 'en_US',
   versaoApi: 'v21.0',
+  // US-15: envio real só para destinos de teste; o paciente fictício abaixo é o único destino.
+  destinosPermitidos: new Set(['5581900000001']) as ReadonlySet<string>,
 };
 const paciente = { cpf: '12345678909', nome: 'Paciente Fictício', telefone: '81900000001' };
 

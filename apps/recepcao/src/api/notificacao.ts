@@ -1,4 +1,4 @@
-import type { Atividade, EstadoConsumo, Lembrete, PaginaLembretes, TrilhaLembrete } from '../tipos';
+import type { Atividade, ConfiguracaoEnvio, EstadoConsumo, Lembrete, PaginaLembretes, TrilhaLembrete } from '../tipos';
 import { requisitar } from './http';
 
 const BASE = '/api/notificacao';
@@ -20,6 +20,14 @@ export const notificacaoApi = {
       `${BASE}/lembretes/${encodeURIComponent(idConsulta)}/trilha`,
       signal ? { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) } : {},
     ),
+  /** Decisão sobre um envio sem confirmação (US-15). */
+  resolverIncerto: (idConsulta: string, acao: 'reenviar' | 'manter_sem_reenvio', solicitante: string) =>
+    requisitar<{ lembrete: { status: string } }>(
+      `${BASE}/lembretes/${encodeURIComponent(idConsulta)}/resolucao`,
+      { method: 'POST', body: JSON.stringify({ acao, solicitante }) },
+    ),
+  /** Modo de envio explícito (US-15). */
+  configuracaoEnvio: () => requisitar<ConfiguracaoEnvio>(`${BASE}/envio/configuracao`),
   /** Cópia da autorização que a Notificação usa no envio (US-14). */
   copiaAutorizacoes: (idPaciente: string, signal?: AbortSignal) =>
     requisitar<{ autorizacoes: { canal: string; situacao: string; versao: number }[] }>(

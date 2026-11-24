@@ -1,4 +1,6 @@
-import { FalhaEnvio, type CanalEnvio, type MensagemLembrete, type ResultadoEnvio } from './canal-envio';
+import { EnvioIncerto, FalhaEnvio, type CanalEnvio, type MensagemLembrete, type ResultadoEnvio } from './canal-envio';
+import { destinoPermitido, type DestinosPermitidos } from './configuracao-envio';
+import { TIMEOUT_WHATSAPP_MS } from '../lembretes/configuracao';
 
 export interface ConfigWhatsApp {
   token: string;
@@ -6,6 +8,8 @@ export interface ConfigWhatsApp {
   template: string;
   idioma: string;
   versaoApi: string;
+  /** US-15: destinos de teste do envio real; `todos` só com configuração explícita. */
+  destinosPermitidos: DestinosPermitidos;
 }
 
 const fmtDataHora = new Intl.DateTimeFormat('pt-BR', {
@@ -24,6 +28,11 @@ export class CanalWhatsApp implements CanalEnvio {
   constructor(private readonly cfg: ConfigWhatsApp) {}
 
   async enviar(m: MensagemLembrete): Promise<ResultadoEnvio> {
+    // US-15: no protótipo os dados são fictícios; só destinos de teste recebem mensagem real.
+    if (!destinoPermitido(this.cfg.destinosPermitidos, m.telefone)) {
+      throw new FalhaEnvio('Destino fora da lista de teste (WHATSAPP_DESTINOS_PERMITIDOS): nenhuma mensagem enviada', true);
+    }
+
     const url = `https://graph.facebook.com/${this.cfg.versaoApi}/${this.cfg.phoneNumberId}/messages`;
     const resposta = await fetch(url, {
       method: 'POST',
@@ -34,12 +43,9 @@ export class CanalWhatsApp implements CanalEnvio {
         type: 'template',
         template: this.montarTemplate(m),
       }),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(TIMEOUT_WHATSAPP_MS),
     }).catch((erro: unknown) => {
-      if (erro instanceof Error && erro.name === 'TimeoutError') {
-        throw new FalhaEnvio('Tempo limite ao contatar o WhatsApp');
-      }
-      throw new FalhaEnvio('Falha de comunicação com o WhatsApp');
+      throw classificarErroDeRede(erro);
     });
 
     if (!resposta.ok) {
@@ -76,4 +82,27 @@ export class CanalWhatsApp implements CanalEnvio {
       ],
     };
   }
+}
+
+/**
+ * Códigos em que a conexão nem chegou a ser aberta: o pedido não saiu e repetir é seguro.
+ * Qualquer outro erro depois de iniciado o pedido (tempo esgotado, conexão cortada) é incerto.
+ */
+const SEM_PEDIDO_ENVIADO = new Set([
+  'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ENETUNREACH', 'EHOSTUNREACH', 'UND_ERR_CONNECT_TIMEOUT',
+  'CERT_HAS_EXPIRED', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'ERR_TLS_CERT_ALTNAME_INVALID',
+]);
+
+/** US-15: separa "nada saiu" (falha, pode repetir) de "pode ter saído" (incerto, não repete sozinho). */
+export function classificarErroDeRede(erro: unknown): FalhaEnvio | EnvioIncerto {
+  if (erro instanceof Error && (erro.name === 'TimeoutError' || erro.name === 'AbortError')) {
+    return new EnvioIncerto('Sem resposta do WhatsApp no tempo limite: a mensagem pode ter sido enviada');
+  }
+  const causa = (erro as { cause?: { code?: unknown } } | null)?.cause;
+  const codigo = typeof causa?.code === 'string' ? causa.code : (erro as { code?: unknown } | null)?.code;
+  if (typeof codigo === 'string' && SEM_PEDIDO_ENVIADO.has(codigo)) {
+    return new FalhaEnvio('Não foi possível conectar ao WhatsApp');
+  }
+  return new EnvioIncerto('Conexão com o WhatsApp interrompida sem resposta: a mensagem pode ter sido enviada');
 }

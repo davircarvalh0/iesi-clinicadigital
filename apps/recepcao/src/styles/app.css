@@ -323,3 +323,13 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); o
 .trilha__item--tentativa .selo { font-weight: 700; }
 .trilha__detalhe { color: var(--texto-medio); overflow-wrap: anywhere; }
 @media (max-width: 720px) { .trilha, .trilha__estado { margin-left: 0; } .trilha__item { grid-template-columns: 1fr; gap: 4px; } }
+
+/* ---------- Modo de envio e decisão sobre envio incerto (US-15) ---------- */
+.lembretes__modo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 20px 16px; padding: 10px 14px;
+  border-radius: 10px; background: var(--fundo-claro); border: 1px solid var(--borda-suave); font-size: 13px; color: var(--texto-medio); }
+.lembretes__modo--real { border-color: var(--sucesso); }
+.decisao { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border-radius: 12px; background: var(--alerta-fundo); }
+.decisao__titulo { font-weight: 700; color: var(--alerta); }
+.decisao__texto { font-size: 13px; color: var(--texto-medio); }
+.decisao__acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.decisao .campo { max-width: 320px; }

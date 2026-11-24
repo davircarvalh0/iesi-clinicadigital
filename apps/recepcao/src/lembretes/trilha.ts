@@ -6,7 +6,7 @@ import type { ResultadoTentativa, TrilhaLembrete } from '../tipos';
 export interface EntradaTrilha {
   id: string;
   em: string;
-  tipo: 'atividade' | 'tentativa';
+  tipo: 'atividade' | 'tentativa' | 'resolucao';
   titulo: string;
   detalhe: string;
   tom: TomSelo;
@@ -17,6 +17,7 @@ const RESULTADO: Record<ResultadoTentativa, { texto: string; tom: TomSelo }> = {
   simulado: { texto: 'simulado em log', tom: 'neutro' },
   aceito_provedor: { texto: 'aceito pelo WhatsApp', tom: 'sucesso' },
   falhou: { texto: 'falhou', tom: 'perigo' },
+  indeterminado: { texto: 'sem confirmação do provedor', tom: 'alerta' },
 };
 
 const duracao = (inicio: string, fim: string | null) => {
@@ -44,5 +45,11 @@ export function linhaDoTempo(trilha: TrilhaLembrete): EntradaTrilha[] {
     ].filter(Boolean);
     return { id: `t-${t.id}`, em: t.iniciadaEm, tipo: 'tentativa', titulo: `Tentativa ${t.numero}: ${texto}`, detalhe: partes.join(' · '), tom };
   });
-  return [...atividades, ...tentativas].sort((x, y) => Date.parse(x.em) - Date.parse(y.em) || x.id.localeCompare(y.id));
+  // US-15: decisões da recepção sobre envios incertos.
+  const resolucoes = (trilha.resolucoes ?? []).map<EntradaTrilha>((r) => ({
+    id: `r-${r.id}`, em: r.registradaEm, tipo: 'resolucao', tom: 'info',
+    titulo: r.acao === 'reenviar' ? 'Decisão: reenviar' : 'Decisão: manter sem reenvio',
+    detalhe: `Registrada por ${r.solicitante}`,
+  }));
+  return [...atividades, ...tentativas, ...resolucoes].sort((x, y) => Date.parse(x.em) - Date.parse(y.em) || x.id.localeCompare(y.id));
 }

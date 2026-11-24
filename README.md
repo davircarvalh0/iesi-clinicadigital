@@ -156,3 +156,11 @@ Na barra lateral, **Lembretes** abre uma tela própria com os lembretes de hoje,
 todo o período. Dá para filtrar por uma ou mais situações e ver quantos lembretes há em cada uma. Cada item mostra a
 consulta, a previsão ou a conclusão do envio, o modo (real ou simulado), as tentativas e o motivo, sem CPF nem telefone.
 A API é `GET /api/notificacao/lembretes/painel`; detalhes em [docs/US-09.md](docs/US-09.md).
+
+## Trilha e envio sem confirmação (US-13 e US-15)
+
+Em **Lembretes**, **Ver trilha** mostra a linha do tempo de cada lembrete: programação, remarcação, bloqueio e cada
+chamada ao canal com o desfecho ([docs/US-13.md](docs/US-13.md)). O topo da tela informa se o envio é **real** ou
+**simulado** e por quê. No modo real, só os telefones de `WHATSAPP_DESTINOS_PERMITIDOS` recebem mensagem. Se o WhatsApp
+não responder depois do pedido, o lembrete fica **sem confirmação**. Ele não é repetido sozinho: a recepção decide na
+trilha entre reenviar ou manter sem reenvio, e a decisão fica registrada ([docs/US-15.md](docs/US-15.md)).

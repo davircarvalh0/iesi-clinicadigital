@@ -19,5 +19,21 @@ export function lerConfiguracaoLembretes(env: NodeJS.ProcessEnv) {
     modoAntecedencia: antecedenciaMinutos === ANTECEDENCIA_NORMAL ? 'normal' as const : 'demonstracao' as const,
     rotinaEnvioIntervaloMs: inteiro('ROTINA_ENVIO_INTERVALO_MS', env.ROTINA_ENVIO_INTERVALO_MS, 5000, INTEIRO_32_MAXIMO),
     envioMaxTentativas: inteiro('ENVIO_MAX_TENTATIVAS', env.ENVIO_MAX_TENTATIVAS, 3, INTEIRO_32_MAXIMO),
+    envioReservaExpiraMs: reservaExpira(env.ENVIO_RESERVA_EXPIRA_MS),
   };
+}
+
+/** Tempo limite da chamada ao WhatsApp no adaptador; a reserva precisa durar mais que isso. */
+export const TIMEOUT_WHATSAPP_MS = 10_000;
+
+/**
+ * US-15: uma reserva 'enviando' mais antiga que isso pertence a uma chamada interrompida (o processo
+ * caiu ou reiniciou). Precisa ser maior que o tempo limite da chamada, para não tomar uma chamada viva.
+ */
+function reservaExpira(valor: string | undefined): number {
+  const ms = inteiro('ENVIO_RESERVA_EXPIRA_MS', valor, 60_000, INTEIRO_32_MAXIMO);
+  if (ms <= TIMEOUT_WHATSAPP_MS) {
+    throw new Error(`ENVIO_RESERVA_EXPIRA_MS inválido: use um valor maior que ${TIMEOUT_WHATSAPP_MS} (tempo limite do WhatsApp)`);
+  }
+  return ms;
 }

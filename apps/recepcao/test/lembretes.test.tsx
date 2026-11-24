@@ -59,9 +59,9 @@ const item = (dados: Partial<ItemPainelLembrete> = {}): ItemPainelLembrete => ({
   id: 'l1', idConsulta: 'c1', pacienteNome: 'Paciente Exemplo Fictício', profissional: 'Dra. Exemplo', especialidade: 'Teste',
   inicioConsulta: '2026-11-25T13:00:00.000Z', enviarEm: '2026-11-24T13:00:00.000Z', antecedenciaMinutos: 1440,
   status: 'programado', tentativas: 0, motivoFalha: null, enviadoEm: null, modoEnvio: null, canalEnvio: null,
-  idExterno: null, atualizadoEm: '2026-11-24T12:00:00.000Z', ...dados,
+  idExterno: null, incertoResolvidoEm: null, atualizadoEm: '2026-11-24T12:00:00.000Z', ...dados,
 });
-const contagem = { programado: 1, enviando: 0, enviado: 0, simulado: 0, aceito_provedor: 0, falhou: 2, cancelado: 0, bloqueado: 0 };
+const contagem = { programado: 1, enviando: 0, enviado: 0, simulado: 0, aceito_provedor: 0, falhou: 2, cancelado: 0, bloqueado: 0, incerto: 0 };
 const pagina = (itens: ItemPainelLembrete[], total = itens.length): PaginaLembretes => ({ itens, total, pagina: 1, tamanhoPagina: 20, contagem });
 const AGORA = 1_000_000;
 
@@ -125,7 +125,7 @@ describe('trilha do lembrete (US-13)', async () => {
     lembrete: {
       id: 'l1', idConsulta: 'c1', status: 'aceito_provedor', enviarEm: '2026-11-24T10:00:00.000Z', enviadoEm: '2026-11-24T10:00:03.000Z',
       tentativas: 2, motivoFalha: null, modoEnvio: 'real', canalEnvio: 'whatsapp', idExterno: 'wamid.x',
-      inicioConsulta: '2026-11-25T10:00:00.000Z', idEventoConsulta: 'e1',
+      inicioConsulta: '2026-11-25T10:00:00.000Z', idEventoConsulta: 'e1', incertoResolvidoEm: null,
     },
     tentativas: [
       { id: 't2', numero: 2, idEventoConsulta: 'e1', canal: 'whatsapp', modo: 'real', resultado: 'aceito_provedor', idExterno: 'wamid.x', motivo: null, iniciadaEm: '2026-11-24T10:00:02.000Z', concluidaEm: '2026-11-24T10:00:02.400Z' },
@@ -136,6 +136,7 @@ describe('trilha do lembrete (US-13)', async () => {
       { id: 'a1', acao: 'lembrete.programado', descricao: 'Envio previsto', idEvento: 'e1', ocorridoEm: '2026-11-23T09:00:00.000Z' },
       { id: 'a2', acao: 'envio.nova_tentativa', descricao: 'Tentativa 1 de 3: WhatsApp respondeu HTTP 503', idEvento: 'e1', ocorridoEm: '2026-11-24T10:00:01.500Z' },
     ],
+    resolucoes: [],
   };
 
   test('CA2: linha do tempo intercala atividades e tentativas em ordem cronológica', () => {
@@ -174,5 +175,67 @@ describe('trilha do lembrete (US-13)', async () => {
     const aberto = renderToStaticMarkup(<ItemLembrete lembrete={item()} trilhaAberta />);
     assert.match(aberto, /Ocultar trilha/);
     assert.match(aberto, /Carregando trilha…/);
+  });
+});
+
+describe('envio real controlado e envio sem confirmação (US-15)', async () => {
+  const { linhaDoTempo } = await import('../src/lembretes/trilha');
+  const { ConteudoTrilha, DecisaoIncerto } = await import('../src/lembretes/TrilhaLembrete');
+  const { ModoEnvio } = await import('../src/lembretes/TelaLembretes');
+  const { pendenciaDoLembrete } = await import('../src/sincronizacao');
+  const nada = () => {};
+  const decidir = async () => {};
+  const base: TrilhaLembrete = {
+    lembrete: {
+      id: 'l1', idConsulta: 'c1', status: 'incerto', enviarEm: '2026-11-24T10:00:00.000Z', enviadoEm: null, tentativas: 1,
+      motivoFalha: 'Sem resposta do WhatsApp no tempo limite: a mensagem pode ter sido enviada', modoEnvio: 'real', canalEnvio: 'whatsapp',
+      idExterno: null, inicioConsulta: new Date(Date.now() + 3_600_000).toISOString(), idEventoConsulta: 'e1', incertoResolvidoEm: null,
+    },
+    tentativas: [{ id: 't1', numero: 1, idEventoConsulta: 'e1', canal: 'whatsapp', modo: 'real', resultado: 'indeterminado', idExterno: null,
+      motivo: 'Sem resposta do WhatsApp no tempo limite: a mensagem pode ter sido enviada', iniciadaEm: '2026-11-24T10:00:00.000Z', concluidaEm: '2026-11-24T10:00:10.000Z' }],
+    atividades: [],
+    resolucoes: [],
+  };
+
+  test('CA1: modo de envio explícito, real ou simulado, com o motivo', () => {
+    const simulado = renderToStaticMarkup(<ModoEnvio envio={{ modo: 'simulado', canal: 'log', motivo: 'CANAL_ENVIO=log: nenhuma mensagem sai da clínica.', destinosPermitidos: null, antecedenciaMinutos: 1440, modoAntecedencia: 'normal', maxTentativas: 3 }} />);
+    assert.match(simulado, /Envio simulado · log/);
+    assert.match(simulado, /nenhuma mensagem sai da clínica/);
+    assert.doesNotMatch(simulado, /Envio real/);
+    const real = renderToStaticMarkup(<ModoEnvio envio={{ modo: 'real', canal: 'whatsapp', motivo: 'Envio real pelo WhatsApp somente para 2 destino(s) de teste.', destinosPermitidos: 2, antecedenciaMinutos: 2, modoAntecedencia: 'demonstracao', maxTentativas: 3 }} />);
+    assert.match(real, /Envio real · WhatsApp/);
+    assert.match(real, /2 destino\(s\) de teste/);
+    assert.match(real, /antecedência de 2 min/);
+  });
+  test('CA2: envio incerto tem selo próprio, filtro e encerra a pendência de cancelamento', () => {
+    const html = tela(filtro(), { dados: { consulta: 'q', pagina: pagina([item({ status: 'incerto', motivoFalha: 'a mensagem pode ter sido enviada' })]) }, erro: null, atualizadoEm: AGORA });
+    assert.match(html, /Envio sem confirmação/);
+    assert.match(html, /Sem confirmação · 0/);
+    const consulta = { id: 'c1', idPaciente: null, vinculoPacientePendente: false, pacienteNome: 'X', pacienteCpf: '0', pacienteTelefone: '0', profissional: 'P', especialidade: 'E', inicio: base.lembrete.inicioConsulta, status: 'cancelada' as const };
+    assert.equal(pendenciaDoLembrete(consulta, { ...item({ status: 'incerto' }), inicioConsulta: base.lembrete.inicioConsulta }), null);
+  });
+  test('CA2: tentativa indeterminada na trilha, nunca como sucesso ou falha', () => {
+    const [entrada] = linhaDoTempo(base);
+    assert.equal(entrada.titulo, 'Tentativa 1: sem confirmação do provedor');
+    assert.equal(entrada.tom, 'alerta');
+  });
+  test('CA3: a trilha oferece a decisão enquanto o envio incerto não foi resolvido', () => {
+    const html = renderToStaticMarkup(<ConteudoTrilha estado={{ fase: 'pronta', trilha: base, em: AGORA }} aoAtualizar={nada} aoDecidir={decidir} />);
+    assert.match(html, /O WhatsApp não confirmou este envio/);
+    assert.match(html, /reenviar pode duplicar a mensagem/);
+    assert.match(html, /Quem está decidindo/);
+    // Sem nome, os botões ficam desabilitados.
+    assert.match(html, /<button type="submit" class="botao botao--primario" disabled="">Reenviar/);
+    const resolvido = renderToStaticMarkup(<ConteudoTrilha estado={{ fase: 'pronta', trilha: {
+      ...base, lembrete: { ...base.lembrete, incertoResolvidoEm: '2026-11-24T10:05:00.000Z' },
+      resolucoes: [{ id: 'r1', acao: 'manter_sem_reenvio', solicitante: 'Juliana', registradaEm: '2026-11-24T10:05:00.000Z' }],
+    }, em: AGORA }} aoAtualizar={nada} aoDecidir={decidir} />);
+    assert.doesNotMatch(resolvido, /O WhatsApp não confirmou este envio/);
+    assert.match(resolvido, /Decisão: manter sem reenvio/);
+    assert.match(resolvido, /Registrada por Juliana/);
+  });
+  test('CA3: consulta já iniciada só permite manter sem reenvio', () => {
+    const html = renderToStaticMarkup(<DecisaoIncerto consultaJaComecou aoDecidir={decidir} />);
+    assert.match(html, /só é possível manter sem reenvio/);
   });
 });

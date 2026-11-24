@@ -16,11 +16,12 @@ export async function trilhaDoLembrete(idConsulta: string) {
     select: {
       id: true, idConsulta: true, status: true, inicioConsulta: true, enviarEm: true, enviadoEm: true,
       tentativas: true, motivoFalha: true, modoEnvio: true, canalEnvio: true, idExterno: true, idEventoConsulta: true,
+      incertoResolvidoEm: true,
     },
   });
   if (!lembrete) throw new ErroHttp(404, 'Nenhum lembrete registrado para esta consulta.');
 
-  const [tentativas, atividades] = await prisma.$transaction([
+  const [tentativas, atividades, resolucoes] = await prisma.$transaction([
     prisma.tentativaEnvio.findMany({
       where: { idLembrete: lembrete.id },
       orderBy: [{ iniciadaEm: 'asc' }, { id: 'asc' }],
@@ -36,6 +37,13 @@ export async function trilhaDoLembrete(idConsulta: string) {
       take: LIMITE,
       select: { id: true, acao: true, descricao: true, idEvento: true, ocorridoEm: true },
     }),
+    // US-15: decisões sobre envios incertos. `solicitante` é o nome de quem opera a recepção, não do paciente.
+    prisma.resolucaoEnvio.findMany({
+      where: { idLembrete: lembrete.id },
+      orderBy: [{ registradaEm: 'asc' }, { id: 'asc' }],
+      take: LIMITE,
+      select: { id: true, acao: true, solicitante: true, registradaEm: true },
+    }),
   ]);
-  return { lembrete, tentativas, atividades };
+  return { lembrete, tentativas, atividades, resolucoes };
 }

@@ -93,6 +93,7 @@ async function salvarProgramacao(
     canalEnvio: null,
     idExterno: null,
     sequenciaAplicada: proximaSequencia(existente, payload.sequencia),
+    incertoResolvidoEm: null,
   };
   await tx.lembrete.upsert({
     where: { idConsulta: payload.id_consulta },
@@ -120,6 +121,9 @@ export function reprogramar(tx: Prisma.TransactionClient, payload: PayloadConsul
   return salvarProgramacao(tx, payload, idEvento, 'lembrete.reprogramado');
 }
 
+/** Situações em que o canal já foi chamado com resultado que o cancelamento não pode apagar. */
+const ENVIO_JA_TENTADO = new Set<Lembrete['status']>(['simulado', 'aceito_provedor', 'enviado', 'incerto']);
+
 export async function cancelar(tx: Prisma.TransactionClient, payload: PayloadConsulta, idEvento: string) {
   const existente = await tx.lembrete.findUnique({ where: { idConsulta: payload.id_consulta } });
   const resultado = avaliarEvento(existente, payload.sequencia);
@@ -129,15 +133,22 @@ export async function cancelar(tx: Prisma.TransactionClient, payload: PayloadCon
   }
 
   // Já concluído com sucesso (simulado, aceito pelo provedor, ou 'enviado' legado anterior à
-  // migração da US-12): o cancelamento não desfaz o envio, só registra que chegou tarde demais.
-  // 'falhou' segue cancelável normalmente.
-  if (existente && (existente.status === 'simulado' || existente.status === 'aceito_provedor' || existente.status === 'enviado')) {
+  // migração da US-12) ou com resultado incerto (US-15): o cancelamento não desfaz nem esconde o
+  // envio, só registra que chegou tarde demais. 'falhou' segue cancelável normalmente.
+  if (existente && ENVIO_JA_TENTADO.has(existente.status)) {
     await tx.lembrete.update({
       where: { idConsulta: payload.id_consulta },
       data: { sequenciaAplicada: proximaSequencia(existente, payload.sequencia) },
     });
     await registrarAtividade(
-      { acao: 'lembrete.cancelado', descricao: 'Consulta cancelada, mas o lembrete já tinha sido enviado', idEvento, idConsulta: payload.id_consulta },
+      {
+        acao: 'lembrete.cancelado',
+        descricao: existente.status === 'incerto'
+          ? 'Consulta cancelada; o envio anterior segue sem confirmação e pode ter chegado ao paciente'
+          : 'Consulta cancelada, mas o lembrete já tinha sido enviado',
+        idEvento,
+        idConsulta: payload.id_consulta,
+      },
       tx,
     );
     return;

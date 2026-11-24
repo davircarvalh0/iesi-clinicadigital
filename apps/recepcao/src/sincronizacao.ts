@@ -35,7 +35,7 @@ export type Pendencia = 'programacao' | 'remarcacao' | 'cancelamento';
  * Estados finais: o cancelamento da consulta não muda mais o lembrete. Os demais ainda podem ser cancelados.
  * Inclui os resultados de envio bem-sucedido da US-12 (`simulado`, `aceito_provedor`) e o legado `enviado`.
  */
-const LEMBRETE_ENCERRADO = new Set<Lembrete['status']>(['enviado', 'simulado', 'aceito_provedor', 'cancelado']);
+const LEMBRETE_ENCERRADO = new Set<Lembrete['status']>(['enviado', 'simulado', 'aceito_provedor', 'incerto', 'cancelado']);
 
 /**
  * Compara a consulta gravada no Agendamento com o lembrete que a Notificação expõe.
