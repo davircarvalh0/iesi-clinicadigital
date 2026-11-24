@@ -1,10 +1,14 @@
 import { Bell, BellOff, CircleHelp, Clock, RotateCcw, X } from 'lucide-react';
 import { Selo, type TomSelo } from '../componentes/Selo';
 import { corDaEspecialidade } from '../dados/profissionais';
-import { dataHora, hora, iniciais, mascaraTelefone } from '../formatacao';
+import { dataHora, hora, horaComSegundos, iniciais, mascaraTelefone } from '../formatacao';
+import {
+  pendenciaDoLembrete, situacaoDesconhecida, situacaoVelha,
+  type AcaoCancelamento, type Pendencia, type Situacao,
+} from '../sincronizacao';
 import type { Consulta, Lembrete, StatusLembrete } from '../tipos';
 
-const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
+export const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
   programado: { tom: 'marca', texto: 'Lembrete programado' },
   enviando: { tom: 'alerta', texto: 'Envio em andamento' },
   enviado: { tom: 'neutro', texto: 'Resultado de envio sem classificação' },
@@ -25,6 +29,13 @@ const TEXTO_PENDENCIA: Record<Pendencia, string> = {
 const tomAvatar = (nome: string) =>
   [...nome].reduce((soma, letra) => soma + letra.charCodeAt(0), 0) % 2 === 0 ? 'verde' : 'ambar';
 
+/** Dica do selo: previsão de envio enquanto programado; motivo quando houver. */
+function dicaDoSelo(lembrete: Lembrete): string | undefined {
+  if (lembrete.motivoFalha) return lembrete.motivoFalha;
+  if (lembrete.status === 'programado') return `Envio previsto para ${dataHora(lembrete.enviarEm)}`;
+  return undefined;
+}
+
 interface Props {
   consulta: Consulta;
   lembrete?: Lembrete;
@@ -38,8 +49,12 @@ interface Props {
 
 export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, aoRemarcar, aoCancelar }: Props) {
   const cancelada = c.status === 'cancelada';
-  const selo = lembrete ? SELO_LEMBRETE[lembrete.status] : null;
-  const antecedencia = lembrete?.antecedenciaMinutos;
+  const desconhecido = situacaoDesconhecida(situacaoLembretes);
+  const velho = situacaoVelha(situacaoLembretes);
+  const pendencia = desconhecido ? null : pendenciaDoLembrete(c, lembrete);
+  const selo = lembrete && !desconhecido ? SELO_LEMBRETE[lembrete.status] : null;
+  const travado = acao?.fase === 'enviando' || acao?.fase === 'incerta';
+  const antecedencia = desconhecido ? null : lembrete?.antecedenciaMinutos;
 
   return (
     <article className={`consulta ${cancelada ? 'consulta--cancelada' : ''}`} aria-busy={acao?.fase === 'enviando'}>
@@ -61,10 +76,18 @@ export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, a
       <div className="consulta__lateral">
         <div className="consulta__selos">
           <Selo tom={cancelada ? 'perigo' : 'info'}>{cancelada ? 'Cancelada' : 'Agendada'}</Selo>
-          {selo ? (
-            <span title={lembrete?.status === 'programado' && !lembrete.motivoFalha ? `Envio previsto para ${dataHora(lembrete.enviarEm)}` : undefined}>
-              <Selo tom={selo.tom}>
-                {lembrete?.status === 'cancelado' ? <BellOff size={13} /> : <Bell size={13} />} {selo.texto}
+          {desconhecido && (
+            <Selo tom="neutro">
+              <CircleHelp size={13} aria-hidden="true" />
+              {situacaoLembretes === 'carregando' ? 'Consultando lembrete…' : 'Lembrete: situação desconhecida'}
+            </Selo>
+          )}
+          {selo && lembrete && (
+            <span title={dicaDoSelo(lembrete)}>
+              <Selo tom={velho ? 'neutro' : selo.tom}>
+                {lembrete.status === 'cancelado'
+                  ? <BellOff size={13} aria-hidden="true" /> : <Bell size={13} aria-hidden="true" />}
+                {' '}{selo.texto}{velho && ' · desatualizado'}
               </Selo>
             </span>
           )}
@@ -72,7 +95,8 @@ export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, a
             <Selo tom="alerta"><Clock size={13} aria-hidden="true" /> Sincronização pendente</Selo>
           )}
         </div>
-        {lembrete?.motivoFalha && (
+        {pendencia && <span className="consulta__aviso">{TEXTO_PENDENCIA[pendencia]}</span>}
+        {selo && lembrete?.motivoFalha && (
           <span className="consulta__detalhes">
             {lembrete.motivoFalha}
             {lembrete.tentativas > 0 && ` · ${lembrete.tentativas} tentativa(s)`}

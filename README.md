@@ -141,3 +141,11 @@ recente. Um envio já em andamento quando chega um cancelamento conclui normalme
 real nunca é ocultado como cancelamento bem-sucedido.
 
 As regras de sequência, a reserva de envio e os limites conhecidos estão em [docs/US-11.md](docs/US-11.md).
+
+## Autorização de contato (US-14)
+
+Em **Pacientes → Editar cadastro**, registre por canal (WhatsApp, SMS, e-mail) a autorização ou a revogação
+informada pelo paciente, com a origem (presencial, telefone, formulário). **Sem registro não há envio**: a Notificação
+confere sua cópia da autorização antes de cada tentativa de envio e marca *Lembrete bloqueado* quando ela é desconhecida ou
+revogada. O modal mostra se a cópia da Notificação já recebeu a última versão. `npm run demo:popular` autoriza o WhatsApp
+de todos os pacientes fictícios menos um, cujo lembrete aparece bloqueado. Detalhes em [docs/US-14.md](docs/US-14.md).

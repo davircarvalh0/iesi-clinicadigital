@@ -18,6 +18,7 @@ test('US-11: cancelamento, sequência fora de ordem e corrida com o envio', {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
   process.env.RABBITMQ_URL = 'amqp://localhost';
   const { prisma } = await import('../src/db');
+  await (await import('./apoio/autorizacao')).autorizarWhatsApp(prisma, '12345678909');
   const { programar, reprogramar, cancelar } = await import('../src/lembretes/servico');
   const { iniciarRotinaEnvio } = await import('../src/envio/rotina-envio');
 
@@ -41,6 +42,7 @@ test('US-11: cancelamento, sequência fora de ordem e corrida com o envio', {
       let disparos = 0;
       const parar = iniciarRotinaEnvio({
         nome: 'log',
+        canalContato: 'whatsapp' as const,
         async enviar() { disparos++; return { status: 'simulado', modoEnvio: 'simulado', canalEnvio: 'log', idExterno: null }; },
       }, 10, 1);
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -127,6 +129,7 @@ test('US-11: cancelamento, sequência fora de ordem e corrida com o envio', {
       let liberarEnvio!: () => void;
       const canalDemorado = {
         nome: 'log' as const,
+        canalContato: 'whatsapp' as const,
         async enviar() {
           await new Promise<void>((resolve) => { liberarEnvio = resolve; });
           return { status: 'simulado' as const, modoEnvio: 'simulado' as const, canalEnvio: 'log' as const, idExterno: null };

@@ -44,6 +44,7 @@ test('US-10: remarcação recalcula pela nova data e a rotina descarta pendênci
   process.env.RABBITMQ_URL = 'amqp://localhost';
   process.env.LEMBRETE_ANTECEDENCIA_MINUTOS = '1440';
   const { prisma } = await import('../src/db');
+  await (await import('./apoio/autorizacao')).autorizarWhatsApp(prisma, '12345678909');
   const { programar, reprogramar } = await import('../src/lembretes/servico');
   const { iniciarRotinaEnvio } = await import('../src/envio/rotina-envio');
   const id = crypto.randomUUID();
@@ -75,6 +76,7 @@ test('US-10: remarcação recalcula pela nova data e a rotina descarta pendênci
     let disparos = 0;
     parar = iniciarRotinaEnvio({
       nome: 'log',
+      canalContato: 'whatsapp' as const,
       async enviar() {
         disparos++;
         return { status: 'simulado', modoEnvio: 'simulado', canalEnvio: 'log', idExterno: null };

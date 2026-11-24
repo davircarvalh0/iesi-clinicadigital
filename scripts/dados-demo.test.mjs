@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { consultasDemo, cpfFicticio, cpfValido, PACIENTES_DEMO } from './dados-demo.mjs';
+import { consultasDemo, cpfFicticio, cpfValido, CPFS_SEM_AUTORIZACAO_DEMO, PACIENTES_DEMO } from './dados-demo.mjs';
 
 test('validador de CPF reconhece CPFs válidos conhecidos e recusa sequências', () => {
   assert.equal(cpfValido('52998224725'), true); // exemplo público de CPF válido
@@ -38,4 +38,10 @@ test('US-19 CA2: carga tem 6 consultas, 5 pacientes, 1 cancelamento e passa na v
     assert.ok(c.telefone.length >= 10 && c.telefone.length <= 13);
     assert.ok(!Number.isNaN(Date.parse(c.inicio)));
   }
+});
+
+test('US-14: só um paciente da carga fica sem autorização, para a tela mostrar o bloqueio', () => {
+  assert.equal(CPFS_SEM_AUTORIZACAO_DEMO.size, 1);
+  const cpfs = new Set(PACIENTES_DEMO.map((p) => p.cpf));
+  for (const cpf of CPFS_SEM_AUTORIZACAO_DEMO) assert.ok(cpfs.has(cpf));
 });

@@ -33,6 +33,7 @@ test('US-12: resultados persistidos e expostos pelo GET /lembretes', {
   const { criarApp } = await import('../src/app');
   const { criarCanalEnvio } = await import('../src/canais');
   const { prisma } = await import('../src/db');
+  await (await import('./apoio/autorizacao')).autorizarWhatsApp(prisma, '12345678909');
   const { iniciarRotinaEnvio } = await import('../src/envio/rotina-envio');
   const { programar, reprogramar } = await import('../src/lembretes/servico');
   const servidor = criarApp().listen(0, '127.0.0.1');
@@ -78,7 +79,8 @@ test('US-12: resultados persistidos e expostos pelo GET /lembretes', {
         parar = iniciarRotinaEnvio(canal, 10, 2);
         const limite = Date.now() + 5000;
         let resultado = await consultar();
-        while (resultado.status === 'programado' && Date.now() < limite) {
+        // 'enviando' é a reserva da US-11 durante a chamada ao canal: ainda não é resultado.
+        while (['programado', 'enviando'].includes(resultado.status) && Date.now() < limite) {
           await new Promise((resolve) => setTimeout(resolve, 25));
           resultado = await consultar();
         }

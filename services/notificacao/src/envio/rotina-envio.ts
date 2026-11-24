@@ -1,5 +1,6 @@
 import type { Lembrete, Prisma } from '../../generated/prisma';
 import { registrarAtividade, type DadosAtividade } from '../atividades/registro';
+import { verificarAutorizacao } from '../autorizacoes/servico';
 import type { CanalEnvio } from '../canais';
 import { FalhaEnvio } from '../canais/canal-envio';
 import { paraFormatoInternacional } from '../canais/telefone';
@@ -15,8 +16,8 @@ export function iniciarRotinaEnvio(canal: CanalEnvio, intervaloMs: number, maxTe
     rodando = true;
     try {
       await enviarVencidos(canal, maxTentativas);
-    } catch {
-      console.error('[rotina-envio] falha no ciclo');
+    } catch (erro) {
+      console.error('[rotina-envio] falha no ciclo', codigoErro(erro));
     } finally {
       rodando = false;
     }
@@ -76,6 +77,16 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
       const motivoFalha = atual.motivoFalha ?? 'Envio interrompido antes da confirmação';
       await registrarResultado(atual, { status: 'falhou', motivoFalha }, {
         ...base, acao: 'lembrete.falhou', descricao: motivoFalha,
+      });
+      return;
+    }
+
+    // US-14: a cópia local da autorização é consultada antes de cada tentativa; desconhecida ou
+    // revogada bloqueia sem chamar o canal. O bloqueio é condicionado à programação lida.
+    const autorizacao = await verificarAutorizacao(atual.pacienteCpf, canal.canalContato);
+    if (!autorizacao.permitido) {
+      await registrarResultado(atual, { status: 'bloqueado', motivoFalha: autorizacao.motivo }, {
+        ...base, acao: 'lembrete.bloqueado', descricao: `Lembrete não enviado: ${autorizacao.motivo}`,
       });
       return;
     }
