@@ -3,10 +3,10 @@ import type { CanalEnvio } from './canal-envio';
 import { CanalLog } from './canal-log';
 import { CanalWhatsApp } from './canal-whatsapp';
 
-export function criarCanalEnvio(): CanalEnvio {
-  if (config.canalEnvio === 'whatsapp') {
-    if (config.whatsapp.token && config.whatsapp.phoneNumberId) {
-      return new CanalWhatsApp(config.whatsapp);
+export function criarCanalEnvio({ canalEnvio, whatsapp }: Pick<typeof config, 'canalEnvio' | 'whatsapp'> = config): CanalEnvio {
+  if (canalEnvio === 'whatsapp') {
+    if (whatsapp.token.trim() && whatsapp.phoneNumberId.trim()) {
+      return new CanalWhatsApp(whatsapp);
     }
     console.warn('[canais] CANAL_ENVIO=whatsapp sem credenciais; usando envio simulado em log');
   }

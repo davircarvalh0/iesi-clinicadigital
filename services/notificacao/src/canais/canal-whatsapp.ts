@@ -1,4 +1,4 @@
-import type { CanalEnvio, MensagemLembrete, ResultadoEnvio } from './canal-envio';
+import { FalhaEnvio, type CanalEnvio, type MensagemLembrete, type ResultadoEnvio } from './canal-envio';
 
 export interface ConfigWhatsApp {
   token: string;
@@ -35,16 +35,25 @@ export class CanalWhatsApp implements CanalEnvio {
         template: this.montarTemplate(m),
       }),
       signal: AbortSignal.timeout(10_000),
+    }).catch((erro: unknown) => {
+      if (erro instanceof Error && erro.name === 'TimeoutError') {
+        throw new FalhaEnvio('Tempo limite ao contatar o WhatsApp');
+      }
+      throw new FalhaEnvio('Falha de comunicação com o WhatsApp');
     });
 
-    const corpo = (await resposta.json().catch(() => ({}))) as {
-      messages?: { id: string }[];
-      error?: { message?: string; code?: number };
-    };
     if (!resposta.ok) {
-      throw new Error(corpo.error?.message ?? `WhatsApp respondeu HTTP ${resposta.status}`);
+      throw new FalhaEnvio(`WhatsApp respondeu HTTP ${resposta.status}`);
     }
-    return { idExterno: corpo.messages?.[0]?.id };
+
+    const corpo = (await resposta.json().catch(() => ({}))) as {
+      messages?: { id?: unknown }[];
+    } | null;
+    const idExterno = corpo?.messages?.[0]?.id;
+    if (typeof idExterno !== 'string' || !idExterno.trim()) {
+      throw new FalhaEnvio('WhatsApp respondeu sem identificador da mensagem');
+    }
+    return { status: 'aceito_provedor', modoEnvio: 'real', canalEnvio: 'whatsapp', idExterno };
   }
 
   private montarTemplate(m: MensagemLembrete) {

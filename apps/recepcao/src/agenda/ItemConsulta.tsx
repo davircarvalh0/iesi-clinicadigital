@@ -1,16 +1,14 @@
 import { Bell, BellOff, CircleHelp, Clock, RotateCcw, X } from 'lucide-react';
 import { Selo, type TomSelo } from '../componentes/Selo';
 import { corDaEspecialidade } from '../dados/profissionais';
-import { hora, horaComSegundos, iniciais, mascaraTelefone } from '../formatacao';
-import {
-  pendenciaDoLembrete, situacaoDesconhecida, situacaoVelha,
-  type AcaoCancelamento, type Pendencia, type Situacao,
-} from '../sincronizacao';
+import { dataHora, hora, iniciais, mascaraTelefone } from '../formatacao';
 import type { Consulta, Lembrete, StatusLembrete } from '../tipos';
 
 const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
   programado: { tom: 'marca', texto: 'Lembrete programado' },
-  enviado: { tom: 'sucesso', texto: 'Lembrete enviado' },
+  enviado: { tom: 'neutro', texto: 'Resultado de envio sem classificação' },
+  simulado: { tom: 'neutro', texto: 'Envio simulado' },
+  aceito_provedor: { tom: 'sucesso', texto: 'Aceito pelo WhatsApp' },
   falhou: { tom: 'perigo', texto: 'Lembrete falhou' },
   cancelado: { tom: 'neutro', texto: 'Lembrete cancelado' },
   bloqueado: { tom: 'alerta', texto: 'Lembrete bloqueado' },
@@ -39,11 +37,8 @@ interface Props {
 
 export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, aoRemarcar, aoCancelar }: Props) {
   const cancelada = c.status === 'cancelada';
-  const desconhecido = situacaoDesconhecida(situacaoLembretes);
-  const velho = situacaoVelha(situacaoLembretes);
-  const pendencia = desconhecido ? null : pendenciaDoLembrete(c, lembrete);
-  const selo = lembrete && !desconhecido ? SELO_LEMBRETE[lembrete.status] : null;
-  const travado = acao?.fase === 'enviando' || acao?.fase === 'incerta';
+  const selo = lembrete ? SELO_LEMBRETE[lembrete.status] : null;
+  const antecedencia = lembrete?.antecedenciaMinutos;
 
   return (
     <article className={`consulta ${cancelada ? 'consulta--cancelada' : ''}`} aria-busy={acao?.fase === 'enviando'}>
@@ -65,18 +60,10 @@ export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, a
       <div className="consulta__lateral">
         <div className="consulta__selos">
           <Selo tom={cancelada ? 'perigo' : 'info'}>{cancelada ? 'Cancelada' : 'Agendada'}</Selo>
-          {desconhecido && (
-            <Selo tom="neutro">
-              <CircleHelp size={13} aria-hidden="true" />
-              {situacaoLembretes === 'carregando' ? 'Consultando lembrete…' : 'Lembrete: situação desconhecida'}
-            </Selo>
-          )}
-          {selo && (
-            <span title={lembrete?.motivoFalha ?? undefined}>
-              <Selo tom={velho ? 'neutro' : selo.tom}>
-                {lembrete?.status === 'cancelado'
-                  ? <BellOff size={13} aria-hidden="true" /> : <Bell size={13} aria-hidden="true" />}
-                {' '}{selo.texto}{velho && ' · desatualizado'}
+          {selo ? (
+            <span title={lembrete?.status === 'programado' && !lembrete.motivoFalha ? `Envio previsto para ${dataHora(lembrete.enviarEm)}` : undefined}>
+              <Selo tom={selo.tom}>
+                {lembrete?.status === 'cancelado' ? <BellOff size={13} /> : <Bell size={13} />} {selo.texto}
               </Selo>
             </span>
           )}
@@ -84,7 +71,15 @@ export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, a
             <Selo tom="alerta"><Clock size={13} aria-hidden="true" /> Sincronização pendente</Selo>
           )}
         </div>
-        {pendencia && <span className="consulta__aviso">{TEXTO_PENDENCIA[pendencia]}</span>}
+        {lembrete?.motivoFalha && (
+          <span className="consulta__detalhes">
+            {lembrete.motivoFalha}
+            {lembrete.tentativas > 0 && ` · ${lembrete.tentativas} tentativa(s)`}
+          </span>
+        )}
+        {antecedencia != null && antecedencia < 1440 && (
+          <Selo tom="alerta">Demonstração · antecedência de {antecedencia} min</Selo>
+        )}
         {c.vinculoPacientePendente && <Selo tom="alerta">Vínculo com Cadastro pendente</Selo>}
         <EstadoAcao acao={acao} />
         {!cancelada && (

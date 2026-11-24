@@ -10,14 +10,14 @@ export interface MensagemLembrete {
   inicioConsulta: Date;
 }
 
-export interface ResultadoEnvio {
-  idExterno?: string;
-}
+export type ResultadoEnvio =
+  | { status: 'simulado'; modoEnvio: 'simulado'; canalEnvio: 'log'; idExterno: null }
+  | { status: 'aceito_provedor'; modoEnvio: 'real'; canalEnvio: 'whatsapp'; idExterno: string };
+
+export class FalhaEnvio extends Error {}
 
 /** Porta de saída para sistemas de terceiros. O modelo interno nunca conhece a API do provedor. */
 export interface CanalEnvio {
-  readonly nome: string;
-  /** Canal cuja autorização do paciente é exigida antes do envio (US-14). */
-  readonly canalContato: CanalContato;
+  readonly nome: ResultadoEnvio['canalEnvio'];
   enviar(mensagem: MensagemLembrete): Promise<ResultadoEnvio>;
 }

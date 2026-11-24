@@ -11,29 +11,46 @@ datasource db {
 enum StatusLembrete {
   programado
   enviado
+  simulado
+  aceito_provedor
   falhou
   cancelado
   /// Sem autorização de contato no canal (desconhecida ou revogada) no momento do envio.
   bloqueado
 }
 
+enum ModoEnvio {
+  simulado
+  real
+}
+
+enum CanalLembrete {
+  log
+  whatsapp
+}
+
 /// Cópia local dos dados de contato necessários ao envio (vindos do evento, sem conteúdo clínico).
 model Lembrete {
-  id             String         @id @default(uuid())
-  idConsulta     String         @unique @map("id_consulta")
-  pacienteNome   String         @map("paciente_nome")
-  pacienteCpf    String?        @map("paciente_cpf")
-  telefone       String
-  profissional   String
-  especialidade  String
-  inicioConsulta DateTime       @map("inicio_consulta") @db.Timestamptz(3)
-  enviarEm       DateTime       @map("enviar_em") @db.Timestamptz(3)
-  status         StatusLembrete @default(programado)
-  tentativas     Int            @default(0)
-  motivoFalha    String?        @map("motivo_falha")
-  enviadoEm      DateTime?      @map("enviado_em") @db.Timestamptz(3)
-  criadoEm       DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm   DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  id                  String         @id @default(uuid())
+  idConsulta          String         @unique @map("id_consulta")
+  pacienteNome        String         @map("paciente_nome")
+  pacienteCpf         String?        @map("paciente_cpf")
+  telefone            String
+  profissional        String
+  especialidade       String
+  inicioConsulta      DateTime       @map("inicio_consulta") @db.Timestamptz(3)
+  enviarEm            DateTime       @map("enviar_em") @db.Timestamptz(3)
+  antecedenciaMinutos Int?           @map("antecedencia_minutos")
+  idEventoConsulta    String?        @map("id_evento_consulta")
+  status              StatusLembrete @default(programado)
+  tentativas          Int            @default(0)
+  motivoFalha         String?        @map("motivo_falha")
+  enviadoEm           DateTime?      @map("enviado_em") @db.Timestamptz(3)
+  modoEnvio           ModoEnvio?     @map("modo_envio")
+  canalEnvio          CanalLembrete? @map("canal_envio")
+  idExterno           String?        @map("id_externo")
+  criadoEm            DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm        DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   @@index([status, enviarEm])
   @@index([pacienteCpf])
