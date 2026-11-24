@@ -9,9 +9,23 @@ export interface Paciente {
   revisao: number;
 }
 
+export type CanalContato = 'whatsapp' | 'sms' | 'email';
+export type OrigemAutorizacao = 'presencial' | 'telefone' | 'formulario';
+
+/** Situação atual de um canal no Cadastro. `sem_registro` não é autorização. */
+export interface Autorizacao {
+  canal: CanalContato;
+  situacao: 'autorizado' | 'revogado' | 'sem_registro';
+  origem: OrigemAutorizacao | null;
+  registradoEm: string | null;
+  versao: number;
+}
+
 export interface PacienteDetalhe extends Paciente {
   nascimento: string | null;
   convenio: string | null;
+  canalPreferido: CanalContato | null;
+  autorizacoes: Autorizacao[];
 }
 
 export type PacienteAgendamento = Pick<Paciente, 'id' | 'cpf' | 'nome' | 'telefone'>;
@@ -39,8 +53,12 @@ export const cadastroApi = {
     requisitar<PacienteDetalhe>(`/api/cadastro/pacientes/${encodeURIComponent(id)}`, {
       signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]),
     }),
-  atualizar: (id: string, contato: Pick<PacienteDetalhe, 'telefone' | 'email' | 'nascimento' | 'convenio' | 'revisao'>) =>
+  atualizar: (id: string, contato: Pick<PacienteDetalhe, 'telefone' | 'email' | 'nascimento' | 'convenio' | 'canalPreferido' | 'revisao'>) =>
     requisitar<PacienteDetalhe>(`/api/cadastro/pacientes/${encodeURIComponent(id)}`, {
       method: 'PATCH', body: JSON.stringify(contato), signal: AbortSignal.timeout(10000),
+    }),
+  registrarAutorizacao: (id: string, dados: { canal: CanalContato; situacao: 'autorizado' | 'revogado'; origem: OrigemAutorizacao }) =>
+    requisitar<{ registro: Autorizacao; autorizacoes: Autorizacao[] }>(`/api/cadastro/pacientes/${encodeURIComponent(id)}/autorizacoes`, {
+      method: 'POST', body: JSON.stringify(dados), signal: AbortSignal.timeout(10000),
     }),
 };

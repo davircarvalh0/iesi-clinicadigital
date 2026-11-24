@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ehPacienteAtualizado } from '@clinica/eventos';
-import { esquemaBusca, esquemaBuscaCpf, esquemaContato, esquemaPacienteAgendado } from '../src/validacao';
+import { esquemaAutorizacao, esquemaBusca, esquemaBuscaCpf, esquemaContato, esquemaPacienteAgendado } from '../src/validacao';
 import { mascaraCpf, mascaraTelefone } from '../../../apps/recepcao/src/formatacao';
 
 test('contato normaliza máscara, permite remover e-mail e protege identidade/revisão', () => {
@@ -48,4 +48,19 @@ test('contratos rejeitam versões desconhecidas e payloads incompletos', () => {
     assert.equal(ehPacienteAtualizado(invalido), false);
   }
   assert.equal(esquemaPacienteAgendado.safeParse({ tipo: 'consulta.agendada', versao: 2 }).success, false);
+});
+
+test('US-14: autorização exige canal, situação e origem conhecidos; data e versão são do Cadastro', () => {
+  assert.deepEqual(esquemaAutorizacao.parse({ canal: 'whatsapp', situacao: 'revogado', origem: 'telefone' }), {
+    canal: 'whatsapp', situacao: 'revogado', origem: 'telefone',
+  });
+  for (const entrada of [
+    {},
+    { canal: 'whatsapp', situacao: 'autorizado' },
+    { canal: 'whatsapp', situacao: 'sem_registro', origem: 'presencial' },
+    { canal: 'fax', situacao: 'autorizado', origem: 'presencial' },
+    { canal: 'whatsapp', situacao: 'autorizado', origem: 'presencial', registradoEm: '2020-01-01' },
+  ]) assert.equal(esquemaAutorizacao.safeParse(entrada).success, false);
+  assert.equal(esquemaContato.parse({ revisao: 1, canalPreferido: null }).canalPreferido, null);
+  assert.equal(esquemaContato.safeParse({ revisao: 1, canalPreferido: 'fax' }).success, false);
 });

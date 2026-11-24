@@ -1,6 +1,6 @@
 import express, { type ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
-import { atualizar, buscarPorCpf, detalhar, ErroCadastro, listar } from './servico';
+import { atualizar, buscarPorCpf, detalhar, ErroCadastro, historicoAutorizacoes, listar, registrarAutorizacao } from './servico';
 
 export function criarApp() {
   const app = express();
@@ -13,6 +13,10 @@ export function criarApp() {
   });
   app.get('/pacientes/:id', async (req, res) => { res.json(await detalhar(req.params.id)); });
   app.patch('/pacientes/:id', async (req, res) => { res.json(await atualizar(req.params.id, req.body)); });
+  app.get('/pacientes/:id/autorizacoes', async (req, res) => { res.json(await historicoAutorizacoes(req.params.id)); });
+  app.post('/pacientes/:id/autorizacoes', async (req, res) => {
+    res.status(201).json(await registrarAutorizacao(req.params.id, req.body));
+  });
   const erros: ErrorRequestHandler = (erro, _req, res, _next) => {
     if (erro instanceof ZodError) { res.status(400).json({ erro: 'Dados de cadastro ou busca inválidos. Confira os campos.' }); return; }
     if (erro instanceof ErroCadastro) { res.status(erro.status).json({ erro: erro.message }); return; }
