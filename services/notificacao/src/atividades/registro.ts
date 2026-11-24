@@ -12,7 +12,9 @@ export type Acao =
   | 'evento.nova_tentativa'
   | 'evento.rejeitado'
   | 'consumo.pausado'
-  | 'consumo.retomado';
+  | 'consumo.retomado'
+  | 'reprocessamento.solicitado'
+  | 'reprocessamento.falhou';
 
 export interface DadosAtividade {
   acao: Acao;

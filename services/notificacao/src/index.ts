@@ -5,6 +5,7 @@ import { iniciarConsumidor } from './consumidor/consumidor';
 import { prisma } from './db';
 import { iniciarRotinaEnvio } from './envio/rotina-envio';
 import { abrirCanalConsumo, conectarRabbit } from './mensageria/conexao';
+import { iniciarFilaErros } from './reprocessamento/fila-erros';
 
 async function main() {
   let encerrando = false;
@@ -18,6 +19,7 @@ async function main() {
 
   const canalRabbit = await abrirCanalConsumo(conexao);
   await iniciarConsumidor(canalRabbit, config.consumidorMaxTentativas);
+  iniciarFilaErros(conexao);
 
   const pararRotina = iniciarRotinaEnvio(criarCanalEnvio(), config.rotinaEnvioIntervaloMs, config.envioMaxTentativas);
 

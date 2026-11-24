@@ -69,3 +69,23 @@ model Atividade {
   @@index([ocorridoEm])
   @@map("atividades")
 }
+
+enum ResultadoReprocessamento {
+  solicitado
+  republicado
+  falhou
+}
+
+/// Cada solicitação explícita de reprocessamento de uma mensagem da fila de erros. Não guarda o conteúdo da mensagem.
+model Reprocessamento {
+  id           String                   @id @default(uuid())
+  idEvento     String                   @map("id_evento")
+  tipo         String?
+  idConsulta   String?                  @map("id_consulta")
+  solicitante  String
+  resultado    ResultadoReprocessamento @default(solicitado)
+  solicitadoEm DateTime                 @default(now()) @map("solicitado_em") @db.Timestamptz(3)
+
+  @@index([idEvento])
+  @@map("reprocessamentos")
+}
