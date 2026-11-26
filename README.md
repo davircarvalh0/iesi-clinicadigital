@@ -2,6 +2,9 @@
 
 Protótipo acadêmico (IESI · CIn/UFPE): plataforma orientada a eventos para clínicas de pequeno porte.
 
+Documentação: [docs/README.md](docs/README.md) (arquitetura, contratos, operação, rastreabilidade).
+Verificação completa em um comando: `npm run verificar` ([docs/US-20.md](docs/US-20.md)).
+
 ## Como rodar
 
 ```bash
