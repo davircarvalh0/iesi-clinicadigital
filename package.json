@@ -33,7 +33,9 @@
     "dev:recepcao": "npm run dev -w @clinica/recepcao",
     "infra": "docker compose up -d rabbitmq db-agendamento db-notificacao db-cadastro",
     "demo:popular": "node scripts/popular-demo.mjs",
-    "ambiente:limpo": "node scripts/ambiente-limpo.mjs"
+    "ambiente:limpo": "node scripts/ambiente-limpo.mjs",
+    "verificar": "node scripts/verificar.mjs",
+    "test:scripts": "node --test scripts/dados-demo.test.mjs scripts/contar-testes.test.mjs"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
