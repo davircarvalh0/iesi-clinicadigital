@@ -24,5 +24,5 @@ rotasLembretes.get('/:idConsulta/trilha', async (req, res) => {
 
 // US-15: POST /lembretes/:idConsulta/resolucao  { acao: 'reenviar' | 'manter_sem_reenvio', solicitante }
 rotasLembretes.post('/:idConsulta/resolucao', async (req, res) => {
-  res.status(201).json(await resolverEnvioIncerto(esquemaIdConsulta.parse(req.params.idConsulta), req.body));
+  res.status(201).json(await resolverEnvioIncerto(esquemaIdConsulta.parse(req.params.idConsulta), { acao: req.body?.acao, solicitante: res.locals.usuario.nome }, new Date(), res.locals.usuario.id));
 });

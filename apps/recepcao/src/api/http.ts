@@ -6,15 +6,18 @@ export class ErroApi extends Error {
 
 /** Sem resposta neste prazo, a requisição é abortada (uma consulta presa não pode travar o polling). */
 export const TIMEOUT_PADRAO_MS = 8000;
+let token: string | null = null;
+export function definirToken(valor: string | null) { token = valor; }
 
 export async function requisitar<T>(url: string, opcoes: RequestInit = {}): Promise<T> {
   const resposta = await fetch(url, {
     ...opcoes,
     signal: opcoes.signal ?? AbortSignal.timeout(TIMEOUT_PADRAO_MS),
-    headers: { 'Content-Type': 'application/json', ...opcoes.headers },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opcoes.headers },
   });
   const corpo = resposta.status === 204 ? null : await resposta.json().catch(() => null);
   if (!resposta.ok) {
+    if (resposta.status === 401 && token) { definirToken(null); window.dispatchEvent(new Event('sessao-expirada')); }
     throw new ErroApi(resposta.status, corpo?.erro ?? `Erro ${resposta.status}`);
   }
   return corpo as T;

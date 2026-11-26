@@ -11,7 +11,7 @@ export const esquemaResolucao = z.object({
     .min(2, 'Informe quem está decidindo (2 a 80 caracteres).').max(80, 'Informe quem está decidindo (2 a 80 caracteres).'),
 }).strict();
 
-export async function resolverEnvioIncerto(idConsulta: string, entrada: unknown, agora = new Date()) {
+export async function resolverEnvioIncerto(idConsulta: string, entrada: unknown, agora = new Date(), idSolicitante?: string) {
   const { acao, solicitante } = esquemaResolucao.parse(entrada);
   return prisma.$transaction(async (tx) => {
     const lembrete = await tx.lembrete.findUnique({ where: { idConsulta } });
@@ -35,7 +35,7 @@ export async function resolverEnvioIncerto(idConsulta: string, entrada: unknown,
     if (!count) throw new ErroHttp(409, 'O lembrete mudou enquanto a decisão era registrada. Atualize e tente de novo.');
 
     const resolucao = await tx.resolucaoEnvio.create({
-      data: { idLembrete: lembrete.id, idConsulta, acao, solicitante, registradaEm: agora },
+      data: { idLembrete: lembrete.id, idConsulta, acao, solicitante, registradaEm: agora, idSolicitante },
     });
     await registrarAtividade({
       acao: acao === 'reenviar' ? 'lembrete.reenvio_solicitado' : 'lembrete.mantido_sem_reenvio',

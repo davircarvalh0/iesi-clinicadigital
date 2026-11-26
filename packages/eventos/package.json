@@ -8,6 +8,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test test/validacao.test.mjs"
+    "test": "npm run build && node --test test/*.test.mjs"
   }
 }

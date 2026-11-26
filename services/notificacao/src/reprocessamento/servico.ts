@@ -39,11 +39,11 @@ export function listarReprocessamentos(limite: number, idEvento?: string) {
  * O resultado do processamento depende do consumidor: se o evento já foi processado, é ignorado como duplicado;
  * se falhar de novo, volta para a fila de erros pelo fluxo normal de tentativas.
  */
-export async function reprocessar(idEvento: string, solicitante: string) {
+export async function reprocessar(idEvento: string, solicitante: string, idSolicitante?: string) {
   const idReprocessamento = randomUUID();
   const resultado = await republicarMensagem(idEvento, idReprocessamento, async (resumo) => {
     await prisma.reprocessamento.create({
-      data: { id: idReprocessamento, idEvento, tipo: resumo.tipo, idConsulta: resumo.idConsulta, solicitante },
+      data: { id: idReprocessamento, idEvento, tipo: resumo.tipo, idConsulta: resumo.idConsulta, solicitante, idSolicitante },
     });
   }).catch((erro) => {
     throw erro instanceof ErroHttp ? erro : filaIndisponivel();

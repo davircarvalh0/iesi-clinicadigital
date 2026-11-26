@@ -13,6 +13,14 @@ enum StatusConsulta {
   cancelada
 }
 
+model Profissional {
+  id String @id @default(uuid())
+  nome String @unique
+  especialidade String
+  consultas Consulta[]
+  @@map("profissionais")
+}
+
 model Consulta {
   id               String         @id @default(uuid())
   idPaciente       String?        @map("id_paciente")
@@ -24,6 +32,8 @@ model Consulta {
   /// US-11: incrementada a cada remarcação e cancelamento, na mesma transação do evento.
   sequencia        Int            @default(1)
   profissional     String
+  profissionalId   String @map("profissional_id")
+  vinculoProfissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Restrict)
   especialidade    String
   inicio           DateTime       @db.Timestamptz(3)
   status           StatusConsulta @default(agendada)
@@ -31,6 +41,7 @@ model Consulta {
   atualizadoEm     DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   @@index([inicio])
+  @@index([profissionalId])
   @@map("consultas")
 }
 

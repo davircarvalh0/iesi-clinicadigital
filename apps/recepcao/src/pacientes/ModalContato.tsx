@@ -3,6 +3,7 @@ import { cadastroApi, type CanalContato, type Paciente, type PacienteDetalhe } f
 import { ErroApi } from '../api/http';
 import { mascaraCpf, mascaraTelefone } from '../formatacao';
 import { AutorizacoesContato, NOME_CANAL } from './AutorizacoesContato';
+import { HistoricoAutorizacoes } from './HistoricoAutorizacoes';
 
 interface Props {
   paciente: Paciente;
@@ -103,6 +104,7 @@ export function ModalContato({ paciente, aoFechar, aoSalvar, aoRecarregar }: Pro
         {erro && <p className="aviso aviso--erro campo--inteiro" role="alert">{erro}</p>}
         {detalhe && <AutorizacoesContato idPaciente={paciente.id} autorizacoes={detalhe.autorizacoes} desabilitado={salvando}
           aoAlterar={(autorizacoes) => setDetalhe((atual) => atual && { ...atual, autorizacoes })} />}
+        {detalhe && <HistoricoAutorizacoes idPaciente={paciente.id} versao={detalhe.autorizacoes.map(a => `${a.canal}:${a.versao}`).join(',')} />}
         <div className="modal__acoes">
           <button type="button" className="botao botao--secundario" disabled={salvando} onClick={aoFechar}>Cancelar</button>
           {falhaDetalhe && <button type="button" className="botao botao--primario"

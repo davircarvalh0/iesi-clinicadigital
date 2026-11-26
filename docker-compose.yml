@@ -73,6 +73,9 @@ services:
     restart: unless-stopped
     environment:
       PORTA: 3003
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_SENHA: ${ADMIN_SENHA:-}
       DATABASE_URL: postgresql://cadastro:cadastro@db-cadastro:5432/cadastro
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
     ports:
@@ -95,6 +98,8 @@ services:
     restart: unless-stopped
     environment:
       PORTA: 3001
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      TEST_CONTROLS: ${TEST_CONTROLS:-false}
       DATABASE_URL: postgresql://agendamento:agendamento@db-agendamento:5432/agendamento
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
     ports:
@@ -117,6 +122,8 @@ services:
     restart: unless-stopped
     environment:
       PORTA: 3002
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      TEST_CONTROLS: ${TEST_CONTROLS:-false}
       DATABASE_URL: postgresql://notificacao:notificacao@db-notificacao:5432/notificacao
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
       LEMBRETE_ANTECEDENCIA_MINUTOS: ${LEMBRETE_ANTECEDENCIA_MINUTOS-1440}

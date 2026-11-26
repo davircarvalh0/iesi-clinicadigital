@@ -1,5 +1,6 @@
 // US-13 ponta a ponta: consulta próxima com autorização → envio simulado → trilha com a tentativa e as atividades.
 // Uso: Compose ativo com CANAL_ENVIO=log e antecedência padrão; TEST_BASE_URL aponta o gateway.
+import { fetch } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { before, test } from 'node:test';

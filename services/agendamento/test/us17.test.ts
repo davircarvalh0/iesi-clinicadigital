@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, before, test } from 'node:test';

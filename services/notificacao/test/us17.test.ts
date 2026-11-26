@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, before, test } from 'node:test';
@@ -9,6 +10,7 @@ let servidor: Server;
 before(async () => {
   // A configuração exige RABBITMQ_URL ao ser carregada; nenhuma conexão é aberta nestes testes.
   process.env.RABBITMQ_URL ??= 'amqp://teste:teste@localhost:5672';
+  process.env.TEST_CONTROLS = 'true';
   const { criarApp } = await import('../src/app');
   await new Promise<void>((resolve) => {
     servidor = criarApp().listen(0, () => {

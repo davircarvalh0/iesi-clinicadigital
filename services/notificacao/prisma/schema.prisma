@@ -129,6 +129,7 @@ model Reprocessamento {
   tipo         String?
   idConsulta   String?                  @map("id_consulta")
   solicitante  String
+  idSolicitante String? @map("id_solicitante")
   resultado    ResultadoReprocessamento @default(solicitado)
   solicitadoEm DateTime                 @default(now()) @map("solicitado_em") @db.Timestamptz(3)
 
@@ -183,6 +184,7 @@ model ResolucaoEnvio {
   idConsulta   String        @map("id_consulta")
   acao         AcaoResolucao
   solicitante  String
+  idSolicitante String? @map("id_solicitante")
   registradaEm DateTime      @default(now()) @map("registrada_em") @db.Timestamptz(3)
 
   @@index([idLembrete, registradaEm])

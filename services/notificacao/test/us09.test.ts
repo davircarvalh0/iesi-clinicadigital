@@ -1,5 +1,6 @@
 // US-09: listagem dedicada de lembretes (GET /lembretes/painel).
 import assert from 'node:assert/strict';
+import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';

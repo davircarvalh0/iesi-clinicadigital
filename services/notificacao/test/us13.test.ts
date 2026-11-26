@@ -1,5 +1,6 @@
 // US-13: trilha rastreável das tentativas de envio (GET /lembretes/:idConsulta/trilha).
 import assert from 'node:assert/strict';
+import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';

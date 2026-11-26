@@ -39,6 +39,8 @@ export interface PaginaPacientes {
 }
 
 export const cadastroApi = {
+  historicoAutorizacoes: (id: string, signal?: AbortSignal) =>
+    requisitar<{ historico: Autorizacao[] }>(`/api/cadastro/pacientes/${encodeURIComponent(id)}/autorizacoes`, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : undefined }),
   buscarPorCpf: (cpf: string, signal: AbortSignal) =>
     requisitar<{ paciente: PacienteAgendamento | null }>('/api/cadastro/pacientes/busca-cpf', {
       method: 'POST', body: JSON.stringify({ cpf }),

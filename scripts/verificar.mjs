@@ -14,6 +14,7 @@
 //   5. Limpeza: remove containers e volumes do projeto isolado (exceto com --manter).
 // Termina com código 1 se qualquer etapa falhar.
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { connect } from 'node:net';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { hostname, userInfo } from 'node:os';
@@ -43,6 +44,10 @@ const BANCO_TESTE = {
 // Ambiente dos comandos: o Compose isolado e os endereços que os roteiros de teste leem.
 const ENV_BASE = {
   ...process.env,
+  AUTH_SECRET: randomBytes(32).toString('hex'),
+  ADMIN_EMAIL: 'administrador@teste.invalid',
+  ADMIN_SENHA: randomBytes(24).toString('hex'),
+  TEST_CONTROLS: 'true',
   ...PORTAS,
   COMPOSE_PROJECT_NAME: PROJETO,
   CANAL_ENVIO: 'log',
@@ -137,6 +142,7 @@ if (!RAPIDO) {
     }
 
     await etapa('4. Integração', 'Carga fictícia (npm run demo:popular)', 'node', ['scripts/popular-demo.mjs']);
+    await etapa('4. Integração', 'Login e perfis de acesso', 'node', ['--test', 'scripts/acesso.integracao.test.mjs']);
     const roteiros = readdirSync(join(RAIZ, 'scripts')).filter((f) => /^us\d+\.integracao\.test\.mjs$/.test(f)).sort();
     for (const arquivo of roteiros) {
       const us = arquivo.match(/^us(\d+)/)[1];

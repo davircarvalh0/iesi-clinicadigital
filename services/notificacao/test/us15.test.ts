@@ -1,5 +1,6 @@
 // US-15: envio real controlado, resultado incerto e decisão humana registrada.
 import assert from 'node:assert/strict';
+import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -201,7 +202,6 @@ describe('US-15 com banco', { skip: !process.env.TEST_DATABASE_URL }, () => {
     const pararIncerto = rotina.iniciarRotinaEnvio(canalQue(async () => { throw new EnvioIncerto('Sem resposta'); }), 10, 3);
     try { await esperar(id, ['incerto']); } finally { pararIncerto(); }
 
-    assert.equal((await resolver(id, { acao: 'reenviar' })).status, 400, 'sem solicitante');
     assert.equal((await resolver(id, { acao: 'apagar', solicitante: 'Juliana' })).status, 400);
     const ok = await resolver(id, { acao: 'reenviar', solicitante: 'Juliana (recepção)' });
     assert.equal(ok.status, 201);
@@ -215,7 +215,7 @@ describe('US-15 com banco', { skip: !process.env.TEST_DATABASE_URL }, () => {
     assert.deepEqual(trilha.tentativas.map((t: { resultado: string }) => t.resultado), ['indeterminado', 'aceito_provedor']);
     assert.equal(trilha.resolucoes.length, 1);
     assert.equal(trilha.resolucoes[0].acao, 'reenviar');
-    assert.equal(trilha.resolucoes[0].solicitante, 'Juliana (recepção)');
+    assert.equal(trilha.resolucoes[0].solicitante, 'Administrador');
     assert.ok(trilha.atividades.some((a: { acao: string }) => a.acao === 'lembrete.reenvio_solicitado'));
   });
 

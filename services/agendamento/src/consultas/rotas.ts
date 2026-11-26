@@ -5,7 +5,8 @@ import { esquemaNovaConsulta, esquemaRemarcacao } from './validacao';
 export const rotasConsultas = Router();
 
 rotasConsultas.get('/', async (_req, res) => {
-  res.json(await servico.listarConsultas());
+  const usuario = res.locals.usuario;
+  res.json(await servico.listarConsultas(usuario?.perfil === 'profissional' ? usuario.profissionalId : undefined));
 });
 
 rotasConsultas.post('/', async (req, res) => {

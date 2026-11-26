@@ -8,6 +8,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PerfilUsuario {
+  administrador
+  recepcionista
+  profissional
+}
+
+model Usuario {
+  id String @id @default(uuid())
+  nome String
+  email String @unique
+  senhaHash String @map("senha_hash")
+  perfil PerfilUsuario
+  profissionalId String? @map("profissional_id")
+  @@map("usuarios")
+}
+
 model Paciente {
   id            String   @id @default(uuid())
   cpf           String   @unique

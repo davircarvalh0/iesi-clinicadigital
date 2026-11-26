@@ -4,6 +4,7 @@
 // Uso: npm run demo:ensaio            (ambiente padrão em http://localhost:8080)
 //      DEMO_BASE_URL=http://localhost:18080 npm run demo:ensaio
 // Termina com código 1 se algum resultado não se confirmar. Deixa as consultas fictícias criadas, para inspeção.
+import { fetch } from './http-autenticado.mjs';
 import { randomInt } from 'node:crypto';
 import { setTimeout as esperar } from 'node:timers/promises';
 import { cpfFicticio, telefoneFicticio } from './dados-demo.mjs';

@@ -224,8 +224,9 @@ describe('envio real controlado e envio sem confirmação (US-15)', async () => 
     assert.match(html, /O WhatsApp não confirmou este envio/);
     assert.match(html, /reenviar pode duplicar a mensagem/);
     assert.match(html, /Quem está decidindo/);
-    // Sem nome, os botões ficam desabilitados.
-    assert.match(html, /<button type="submit" class="botao botao--primario" disabled="">Reenviar/);
+    // A identidade vem da sessão, sem digitação manual do solicitante.
+    assert.match(html, /usuário autenticado/);
+    assert.match(html, /<button type="submit" class="botao botao--primario">Reenviar/);
     const resolvido = renderToStaticMarkup(<ConteudoTrilha estado={{ fase: 'pronta', trilha: {
       ...base, lembrete: { ...base.lembrete, incertoResolvidoEm: '2026-11-24T10:05:00.000Z' },
       resolucoes: [{ id: 'r1', acao: 'manter_sem_reenvio', solicitante: 'Juliana', registradaEm: '2026-11-24T10:05:00.000Z' }],

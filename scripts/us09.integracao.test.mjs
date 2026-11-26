@@ -1,5 +1,6 @@
 // US-09 ponta a ponta: consultas criadas pela API viram lembretes na listagem dedicada da recepção.
 // Uso: Compose ativo (CANAL_ENVIO=log); TEST_BASE_URL aponta o gateway (padrão http://localhost:8080).
+import { fetch } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { before, test } from 'node:test';

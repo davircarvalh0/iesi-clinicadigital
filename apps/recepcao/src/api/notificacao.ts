@@ -21,10 +21,10 @@ export const notificacaoApi = {
       signal ? { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) } : {},
     ),
   /** Decisão sobre um envio sem confirmação (US-15). */
-  resolverIncerto: (idConsulta: string, acao: 'reenviar' | 'manter_sem_reenvio', solicitante: string) =>
+  resolverIncerto: (idConsulta: string, acao: 'reenviar' | 'manter_sem_reenvio') =>
     requisitar<{ lembrete: { status: string } }>(
       `${BASE}/lembretes/${encodeURIComponent(idConsulta)}/resolucao`,
-      { method: 'POST', body: JSON.stringify({ acao, solicitante }) },
+      { method: 'POST', body: JSON.stringify({ acao }) },
     ),
   /** Modo de envio explícito (US-15). */
   configuracaoEnvio: () => requisitar<ConfiguracaoEnvio>(`${BASE}/envio/configuracao`),

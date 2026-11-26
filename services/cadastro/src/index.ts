@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import { criarApp } from './app';
 import { prisma } from './db';
 import { receberAgendamento } from './servico';
+import { inicializarAdministrador } from './usuarios';
 
 const MAX_TENTATIVAS = 3;
 
@@ -53,6 +54,7 @@ async function publicar(canal: ConfirmChannel) {
 }
 
 async function main() {
+  await inicializarAdministrador();
   const url = process.env.RABBITMQ_URL;
   if (!url) throw new Error('RABBITMQ_URL obrigatória');
   let conexao: Awaited<ReturnType<typeof amqp.connect>> | undefined;

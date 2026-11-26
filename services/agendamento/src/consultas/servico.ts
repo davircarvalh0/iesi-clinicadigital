@@ -5,12 +5,14 @@ import { prisma } from '../db';
 import { ErroHttp } from '../http/erros';
 import type { NovaConsulta, Remarcacao } from './validacao';
 
-export function listarConsultas() {
-  return prisma.consulta.findMany({ orderBy: { inicio: 'asc' } });
+export function listarConsultas(profissionalId?: string) {
+  return prisma.consulta.findMany({ where: profissionalId ? { profissionalId } : undefined, orderBy: { inicio: 'asc' } });
 }
 
 export function agendar(dados: NovaConsulta): Promise<Consulta> {
   return prisma.$transaction(async (tx) => {
+    const profissional = await tx.profissional.findUnique({ where: { nome: dados.profissional } });
+    if (!profissional || profissional.especialidade !== dados.especialidade) throw new ErroHttp(400, 'Profissional ou especialidade inválidos.');
     const consulta = await tx.consulta.create({
       data: {
         idPaciente: dados.idPaciente,
@@ -19,6 +21,7 @@ export function agendar(dados: NovaConsulta): Promise<Consulta> {
         pacienteCpf: dados.cpf,
         pacienteTelefone: dados.telefone,
         profissional: dados.profissional,
+        profissionalId: profissional.id,
         especialidade: dados.especialidade,
         inicio: dados.inicio,
       },

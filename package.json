@@ -7,11 +7,13 @@
     "apps/*"
   ],
   "scripts": {
+    "preparar:acesso": "node scripts/preparar-acesso.mjs",
     "postinstall": "npm run build -w @clinica/eventos && npm run prisma:generate --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:integracao": "node --test scripts/us07.integracao.test.mjs",
+    "test:acesso": "node --test scripts/acesso.integracao.test.mjs",
     "test:us01:reinicio": "node --test scripts/us01.reinicio.test.mjs",
     "test:us03": "node --test scripts/us03.integracao.test.mjs",
     "test:us04": "node --test scripts/us04.integracao.test.mjs",

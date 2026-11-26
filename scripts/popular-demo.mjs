@@ -5,6 +5,7 @@
 // - Banco vazio: agenda 6 consultas (5 pacientes), cancela 1 e confere a propagação nos três serviços.
 // - Agenda já populada: não grava nada e só confere/mostra o resumo (pode rodar de novo sem duplicar).
 // A saída mostra apenas contagens e estados, nunca nome, CPF ou telefone.
+import { fetch } from './http-autenticado.mjs';
 import { consultasDemo, CPFS_SEM_AUTORIZACAO_DEMO, PACIENTES_DEMO } from './dados-demo.mjs';
 
 const BASE = (process.env.DEMO_BASE_URL ?? `http://localhost:${process.env.RECEPCAO_PORTA ?? 8080}`).replace(/\/$/, '');

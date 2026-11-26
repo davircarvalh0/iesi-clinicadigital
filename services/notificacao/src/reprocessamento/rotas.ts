@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { inspecionar, listarReprocessamentos, reprocessar } from './servico';
 
-// Rotas operacionais da fila de erros. Só existem quando OPERACAO_HABILITADA=true (ambiente de demonstração).
+// Rotas operacionais da fila de erros. O app exige identidade administrativa.
 export const rotasOperacao = Router();
 
 const mensagemLimite = 'Limite inválido. Informe um inteiro a partir de 1.';
@@ -26,8 +26,8 @@ rotasOperacao.get('/erros', async (req, res) => {
 // POST /operacao/erros/:idEvento/reprocessar { "solicitante": "..." }
 rotasOperacao.post('/erros/:idEvento/reprocessar', async (req, res) => {
   const idEvento = esquemaIdEvento.parse(req.params.idEvento);
-  const { solicitante } = esquemaSolicitacao.parse(req.body);
-  res.status(202).json(await reprocessar(idEvento, solicitante));
+  const { solicitante } = esquemaSolicitacao.parse({ solicitante: res.locals.usuario.nome });
+  res.status(202).json(await reprocessar(idEvento, solicitante, res.locals.usuario.id));
 });
 
 // GET /operacao/reprocessamentos?limite=50&idEvento=<id>

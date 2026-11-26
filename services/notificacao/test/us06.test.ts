@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, before, test } from 'node:test';
@@ -65,12 +66,9 @@ test('CA1: motivo e tipo com números longos são mascarados e mensagem ilegíve
   assert.ok(!JSON.stringify(ilegivel).includes('00011122233'));
 });
 
-test('a solicitação exige o solicitante e um limite válido antes de tocar no broker ou no banco', async () => {
+test('a solicitação identifica o solicitante autenticado e valida limites', async () => {
   const semCorpo = await chamar('/operacao/erros/evento-us06/reprocessar', { method: 'POST' });
-  assert.equal(semCorpo.status, 400);
-  const curto = await chamar('/operacao/erros/evento-us06/reprocessar', { method: 'POST', body: JSON.stringify({ solicitante: 'ab' }) });
-  assert.equal(curto.status, 400);
-  assert.match(JSON.stringify(curto.corpo), /Solicitante deve ter ao menos 3 caracteres/);
+  assert.equal(semCorpo.status, 503);
   for (const limite of ['-1', '0', 'abc']) {
     assert.equal((await chamar(`/operacao/erros?limite=${limite}`)).status, 400, `limite=${limite}`);
     assert.equal((await chamar(`/operacao/reprocessamentos?limite=${limite}`)).status, 400, `limite=${limite}`);

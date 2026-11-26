@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { agendamentoApi } from '../api/agendamento';
 import { cadastroApi, type PacienteAgendamento } from '../api/cadastro';
 import { descreverFalha } from '../api/http';
-import { ESPECIALIDADES, PROFISSIONAIS } from '../dados/profissionais';
+import { requisitar } from '../api/http';
+import type { Profissional } from '../acesso';
 import { chaveDia, chaveDiaDaqui, dataHora, hora, isoRecife, mascaraCpf, mascaraTelefone } from '../formatacao';
 import type { Consulta } from '../tipos';
 
@@ -24,8 +25,8 @@ const FORM_VAZIO = {
   nome: '',
   cpf: '',
   telefone: '',
-  profissional: PROFISSIONAIS[0].nome,
-  especialidade: PROFISSIONAIS[0].especialidade,
+  profissional: '',
+  especialidade: '',
   data: chaveDiaDaqui(1),
   hora: '10:00',
 };
@@ -39,13 +40,20 @@ function formInicial(modo: ModoModal): Form {
 export function ModalConsulta({ modo, aoFechar, aoSalvar }: Props) {
   const remarcando = modo.tipo === 'remarcar';
   const [form, setForm] = useState<Form>(() => formInicial(modo));
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  useEffect(() => {
+    if (remarcando) return;
+    const controle = new AbortController();
+    requisitar<Profissional[]>('/api/agendamento/profissionais', { signal: controle.signal }).then(setProfissionais).catch(() => { if (!controle.signal.aborted) setErro('Não foi possível carregar os profissionais.'); });
+    return () => controle.abort();
+  }, [remarcando]);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [busca, setBusca] = useState<Busca>({ estado: 'inicial' });
   const requisicao = useRef<AbortController | null>(null);
   const paciente = busca.estado === 'encontrado' ? busca.paciente : null;
   const podePreencher = busca.estado === 'novo' || (busca.estado === 'indisponivel' && busca.continuar);
-  const podeSalvar = remarcando || paciente !== null || podePreencher;
+  const podeSalvar = remarcando || (!!form.profissional && (paciente !== null || podePreencher));
   const cpfCompleto = form.cpf.replace(/\D/g, '').length === 11;
 
   useEffect(() => () => requisicao.current?.abort(), []);
@@ -59,7 +67,7 @@ export function ModalConsulta({ modo, aoFechar, aoSalvar }: Props) {
   const alterar = (dados: Partial<Form>) => setForm((atual) => ({ ...atual, ...dados }));
 
   const escolherProfissional = (nome: string) => {
-    const profissional = PROFISSIONAIS.find((p) => p.nome === nome);
+    const profissional = profissionais.find((p) => p.nome === nome);
     alterar({ profissional: nome, especialidade: profissional?.especialidade ?? form.especialidade });
   };
 
@@ -192,15 +200,14 @@ export function ModalConsulta({ modo, aoFechar, aoSalvar }: Props) {
             </label>
             <label className="campo">
               Profissional
-              <select value={form.profissional} onChange={(e) => escolherProfissional(e.target.value)}>
-                {PROFISSIONAIS.map((p) => <option key={p.nome}>{p.nome}</option>)}
+              <select required value={form.profissional} onChange={(e) => escolherProfissional(e.target.value)}>
+                <option value="">Selecione</option>
+                {profissionais.map((p) => <option key={p.id}>{p.nome}</option>)}
               </select>
             </label>
             <label className="campo">
               Especialidade
-              <select value={form.especialidade} onChange={(e) => alterar({ especialidade: e.target.value })}>
-                {ESPECIALIDADES.map((e) => <option key={e}>{e}</option>)}
-              </select>
+              <input value={form.especialidade} readOnly />
             </label>
           </>
         )}

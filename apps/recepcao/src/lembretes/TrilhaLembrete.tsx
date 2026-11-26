@@ -23,8 +23,8 @@ export function TrilhaLembrete({ idConsulta, aoAlterar }: { idConsulta: string; 
       .catch((erro) => { if (!controle.signal.aborted) setEstado({ fase: 'erro', motivo: motivoDaFalha(erro) }); });
     return () => controle.abort();
   }, [idConsulta, tentativa]);
-  const decidir = async (acao: AcaoIncerto, solicitante: string) => {
-    await notificacaoApi.resolverIncerto(idConsulta, acao, solicitante);
+  const decidir = async (acao: AcaoIncerto) => {
+    await notificacaoApi.resolverIncerto(idConsulta, acao);
     setTentativa((n) => n + 1);
     aoAlterar?.();
   };
@@ -34,7 +34,7 @@ export function TrilhaLembrete({ idConsulta, aoAlterar }: { idConsulta: string; 
 interface PropsConteudo {
   estado: Estado;
   aoAtualizar: () => void;
-  aoDecidir?: (acao: AcaoIncerto, solicitante: string) => Promise<void>;
+  aoDecidir?: (acao: AcaoIncerto) => Promise<void>;
 }
 
 /** Parte visual: renderizada nos testes com estados controlados. */
@@ -81,19 +81,17 @@ type FaseDecisao = { fase: 'pronta' } | { fase: 'enviando'; acao: AcaoIncerto } 
 
 export function DecisaoIncerto({ consultaJaComecou, aoDecidir }: {
   consultaJaComecou: boolean;
-  aoDecidir: (acao: AcaoIncerto, solicitante: string) => Promise<void>;
+  aoDecidir: (acao: AcaoIncerto) => Promise<void>;
 }) {
-  const [solicitante, setSolicitante] = useState('');
   const [estado, setEstado] = useState<FaseDecisao>({ fase: 'pronta' });
-  const nomeValido = solicitante.trim().length >= 2;
   const ocupado = estado.fase === 'enviando';
 
   async function decidir(acao: AcaoIncerto, e?: FormEvent) {
     e?.preventDefault();
-    if (!nomeValido || ocupado) return;
+    if (ocupado) return;
     setEstado({ fase: 'enviando', acao });
     try {
-      await aoDecidir(acao, solicitante.trim());
+      await aoDecidir(acao);
       setEstado({ fase: 'pronta' });
     } catch (erro) {
       setEstado({ fase: 'erro', mensagem: descreverFalha(erro, acao === 'reenviar' ? 'o reenvio' : 'o registro da decisão') });
@@ -107,14 +105,12 @@ export function DecisaoIncerto({ consultaJaComecou, aoDecidir }: {
         A mensagem pode ter chegado ao paciente. Confira no gerenciador do WhatsApp ou com o paciente antes de decidir:
         reenviar pode duplicar a mensagem, e manter sem reenvio encerra as tentativas.
       </p>
-      <label className="campo">Quem está decidindo
-        <input value={solicitante} onChange={(e) => setSolicitante(e.target.value)} maxLength={80} placeholder="Seu nome" required />
-      </label>
+      <p className="decisao__texto">Quem está decidindo: usuário autenticado.</p>
       <div className="decisao__acoes">
-        <button type="submit" className="botao botao--primario" disabled={!nomeValido || ocupado || consultaJaComecou}>
+        <button type="submit" className="botao botao--primario" disabled={ocupado || consultaJaComecou}>
           {estado.fase === 'enviando' && estado.acao === 'reenviar' ? 'Reenviando…' : 'Reenviar'}
         </button>
-        <button type="button" className="botao botao--secundario" disabled={!nomeValido || ocupado}
+        <button type="button" className="botao botao--secundario" disabled={ocupado}
           onClick={() => void decidir('manter_sem_reenvio')}>
           {estado.fase === 'enviando' && estado.acao === 'manter_sem_reenvio' ? 'Registrando…' : 'Manter sem reenvio'}
         </button>

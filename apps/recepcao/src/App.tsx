@@ -13,7 +13,9 @@ import { ListaConsultas } from './agenda/ListaConsultas';
 import { ModalConsulta, type ModoModal } from './agenda/ModalConsulta';
 import { BarraLateral } from './componentes/BarraLateral';
 import { EstadoSincronizacao } from './componentes/EstadoSincronizacao';
-import { ModoDemonstracao } from './eventos/ModoDemonstracao';
+import { SaudeServicos } from './componentes/SaudeServicos';
+import type { Usuario } from './acesso';
+import { TelaAdministracao } from './administracao';
 import { PainelEventos } from './eventos/PainelEventos';
 import { chaveDia, diaPorExtenso, horaComSegundos, saudacao } from './formatacao';
 import { useAgora } from './hooks/useAgora';
@@ -27,9 +29,9 @@ import type { Consulta, Lembrete } from './tipos';
 const INTERVALO_POLLING_MS = 1500;
 /** Sem resposta boa há mais que isso (4 ciclos), o dado na tela é tratado como atrasado. */
 const LIMITE_ATRASO_MS = 6000;
-const RECEPCIONISTA = 'Juliana';
 
-export function App() {
+export function App({ usuario, sair }: { usuario: Usuario; sair: () => void }) {
+  const [administracao, setAdministracao] = useState(false);
   const [tela, setTela] = useState<Tela>(() => telaDoHash(window.location.hash));
   useEffect(() => {
     const navegar = () => setTela(telaDoHash(window.location.hash));
@@ -41,7 +43,6 @@ export function App() {
   const lembretes = usePolling(() => notificacaoApi.listar(), INTERVALO_POLLING_MS);
   const eventos = usePolling(agendamentoApi.listarEventos, INTERVALO_POLLING_MS);
   const atividades = usePolling(notificacaoApi.listarAtividades, INTERVALO_POLLING_MS);
-  const consumo = usePolling(notificacaoApi.estadoConsumo, INTERVALO_POLLING_MS);
   const [modal, setModal] = useState<ModoModal | null>(null);
   const [acoes, setAcoes] = useState<ReadonlyMap<string, AcaoCancelamento>>(new Map());
   const cancelando = useRef(new Set<string>());
@@ -76,7 +77,7 @@ export function App() {
   ).length;
 
   const atualizar = () =>
-    Promise.all([consultas.recarregar(), lembretes.recarregar(), eventos.recarregar(), atividades.recarregar(), consumo.recarregar()]);
+    Promise.all([consultas.recarregar(), lembretes.recarregar(), eventos.recarregar(), atividades.recarregar()]);
 
   const definirAcao = (id: string, acao: AcaoCancelamento) => setAcoes((atual) => new Map(atual).set(id, acao));
 
@@ -94,10 +95,15 @@ export function App() {
       <BarraLateral consultasHoje={consultasHoje} tela={tela} />
 
       <main className="principal">
+        <div className="cabecalho">
+          {usuario.perfil === 'administrador' && <button className="botao botao--secundario" onClick={() => setAdministracao(a => !a)}>{administracao ? 'Voltar à recepção' : 'Administração'}</button>}
+          <button className="botao botao--secundario" onClick={sair}>Sair</button>
+        </div>
+        {administracao && usuario.perfil === 'administrador' ? <TelaAdministracao /> : <>
         <header className="cabecalho">
           <div>
             <p className="cabecalho__saudacao">
-              {saudacao()}, {RECEPCIONISTA} · {diaPorExtenso(new Date())}
+              {saudacao()}, {usuario.nome} · {diaPorExtenso(new Date())}
             </p>
             <h1 className="cabecalho__titulo">{TITULO_TELA[tela]}</h1>
           </div>
@@ -144,17 +150,18 @@ export function App() {
           aoRemarcar={(consulta) => setModal({ tipo: 'remarcar', consulta })}
           aoCancelar={(consulta) => void cancelar(consulta)}
         />}
+        </>}
       </main>
 
       <div className="coluna-direita">
+        {usuario.perfil === 'administrador' && <SaudeServicos />}
         <PainelEventos
           eventos={eventos.dados ?? []}
           atividades={atividades.dados ?? []}
-          notificacaoNoAr={!atividades.erro && consumo.dados?.consumindo !== false}
+          notificacaoNoAr={!atividades.erro}
           notificacaoAcessivel={!atividades.erro}
           cadastroEstado={cadastro.erro ? 'indisponível' : cadastro.dados ? 'no ar' : 'conectando'}
         />
-        <ModoDemonstracao consumo={consumo.dados} acessivel={!consumo.erro} eventos={eventos.dados ?? []} aoMudar={atualizar} />
       </div>
 
       {modal && (

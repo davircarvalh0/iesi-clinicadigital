@@ -12,6 +12,7 @@
 //      que os dados continuam lá e que a carga não duplica.
 //   4. Grava docs/evidencias/us19-ambiente-limpo.txt com comandos, versões, saídas e resultado (sanitizados).
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { hostname, release, type, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -31,7 +32,7 @@ const PORTAS = {
 };
 for (const chave of Object.keys(PORTAS)) PORTAS[chave] = process.env[`US19_${chave}`] ?? PORTAS[chave];
 const BASE = `http://localhost:${PORTAS.RECEPCAO_PORTA}`;
-const ENV = { ...process.env, ...PORTAS, COMPOSE_PROJECT_NAME: PROJETO };
+const ENV = { ...process.env, ...PORTAS, COMPOSE_PROJECT_NAME: PROJETO, AUTH_SECRET: randomBytes(32).toString('hex'), ADMIN_EMAIL: 'administrador@teste.invalid', ADMIN_SENHA: randomBytes(24).toString('hex'), TEST_CONTROLS: 'true' };
 const COMPOSE = ['compose', '-p', PROJETO, '--env-file', '.env.example'];
 const SERVICOS = ['agendamento', 'notificacao', 'cadastro'];
 

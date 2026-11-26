@@ -1,6 +1,7 @@
 // US-15 pelo gateway: modo de envio explícito e decisão sobre envio incerto protegida pelas regras.
 // O resultado incerto em si é provocado nos testes de banco (services/notificacao/test/us15.test.ts),
 // porque exige um provedor que não responde. Uso: Compose ativo com CANAL_ENVIO=log.
+import { fetch } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { before, test } from 'node:test';

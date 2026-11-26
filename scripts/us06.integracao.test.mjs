@@ -1,3 +1,4 @@
+import { fetch } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -16,7 +17,7 @@ const compose = (...args) => executar('docker', ['compose', '-p', projeto, ...ar
 const CPF = '00066677788';
 const NOME = 'Paciente Fictício US06';
 const TELEFONE = '81900000061';
-const SOLICITANTE = 'Operadora Fictícia';
+const SOLICITANTE = 'Administrador';
 
 async function api(rota, { method = 'GET', body } = {}) {
   const resposta = await fetch(`${base}/api/${rota}`, {
@@ -130,13 +131,12 @@ test('US-06: falha, correção, replay e duplicata', { timeout: 240000 }, async 
   for (const sentinela of [CPF, NOME, TELEFONE]) assert.ok(!listagem.includes(sentinela), `a listagem não deve expor ${sentinela}`);
   assert.deepEqual(await lembretes(idConsulta), [], 'sem reprocessamento não há lembrete');
 
-  // CA2: o pedido exige solicitante; a mensagem só sai da fila depois da republicação confirmada.
-  assert.equal((await reprocessar(evento.id_evento, {})).status, 400);
-  assert.ok(await naFilaDeErros(evento.id_evento), 'pedido inválido não consome a mensagem');
-  const pedido = await reprocessar(evento.id_evento);
+  // CA2: o solicitante vem da sessão, não de uma declaração no corpo.
+  const pedido = await reprocessar(evento.id_evento, { solicitante: 'Nome informado pelo cliente' });
   assert.equal(pedido.status, 202);
   assert.equal(pedido.dados.idEvento, evento.id_evento);
   assert.equal(pedido.dados.solicitante, SOLICITANTE);
+  assert.ok(pedido.dados.idSolicitante);
   assert.equal(pedido.dados.resultado, 'republicado');
   assert.ok(Number.isFinite(Date.parse(pedido.dados.solicitadoEm)));
 

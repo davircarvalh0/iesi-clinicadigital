@@ -7,8 +7,15 @@ Verificação completa em um comando: `npm run verificar` ([docs/US-20.md](docs/
 
 ## Como rodar
 
+O login é obrigatório. Antes da primeira subida, gere as credenciais locais com `npm run preparar:acesso`.
+Consulte `ADMIN_EMAIL` e `ADMIN_SENHA` no arquivo `.env` (não versionado). O Cadastro cria o primeiro administrador
+somente quando ainda não há usuários. A chave `AUTH_SECRET` deve permanecer igual nos três serviços e ter pelo menos 32 bytes.
+O administrador cadastra profissionais e cria contas de recepção, profissionais ou outros administradores na tela Administração.
+Os profissionais visualizam apenas sua própria agenda. Endpoints de operação são exclusivos de administrador.
+Os controles de demonstração não aparecem na interface e só são habilitados, com autenticação administrativa, pelos testes isolados.
+
 ```bash
-cp .env.example .env        # ajuste CANAL_ENVIO, WHATSAPP_* e LEMBRETE_ANTECEDENCIA_MINUTOS
+npm run preparar:acesso      # preserva configurações existentes e gera credenciais faltantes
 docker compose up --build --wait   # termina quando os serviços migraram e responderam
 ```
 
@@ -42,7 +49,10 @@ O roteiro sobe do zero, confere migrações e saúde, carrega os dados fictício
 grava comandos, versões e resultado em `docs/evidencias/us19-ambiente-limpo.txt`. As portas do Compose são configuráveis
 (`RECEPCAO_PORTA`, `AGENDAMENTO_PORTA` etc., veja `.env.example`). Detalhes em [docs/US-19.md](docs/US-19.md).
 
-### Roteiro da demonstração
+### Roteiro histórico de testes (ambiente isolado)
+
+As ações de simulação abaixo não estão disponíveis na interface de uso normal. Os testes isolados habilitam
+controles de falha com `TEST_CONTROLS=true`, sempre exigindo acesso administrativo.
 
 - **Caminho feliz:** "Nova consulta" → o feed mostra *Evento publicado* (Agendamento) e *Lembrete programado* (Notificação). No horário, aparece *Envio simulado* no canal log ou *Aceito pelo WhatsApp* quando o provedor retorna um identificador.
 - **Cancelar / Remarcar:** o selo do lembrete muda sozinho para *cancelado* ou é reprogramado.
