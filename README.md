@@ -132,3 +132,20 @@ Quando a antecedência já passou, uma consulta futura pode receber o lembrete n
 Consultas iniciadas têm o lembrete descartado com o motivo registrado.
 
 Consulte a [política de antecedência](docs/US-10.md) e o [contrato dos resultados de envio](docs/US-12.md).
+
+## Evitar envio obsoleto após cancelamento ou remarcação (US-11)
+
+Cancelar uma consulta antes do envio garante que o lembrete nunca chegue a ser enviado. Eventos
+fora de ordem (reentregas atrasadas) não reativam um cancelamento nem desfazem uma remarcação mais
+recente. Um envio já em andamento quando chega um cancelamento conclui normalmente — o resultado
+real nunca é ocultado como cancelamento bem-sucedido.
+
+As regras de sequência, a reserva de envio e os limites conhecidos estão em [docs/US-11.md](docs/US-11.md).
+
+## Autorização de contato (US-14)
+
+Em **Pacientes → Editar cadastro**, registre por canal (WhatsApp, SMS, e-mail) a autorização ou a revogação
+informada pelo paciente, com a origem (presencial, telefone, formulário). **Sem registro não há envio**: a Notificação
+confere sua cópia da autorização antes de cada tentativa de envio e marca *Lembrete bloqueado* quando ela é desconhecida ou
+revogada. O modal mostra se a cópia da Notificação já recebeu a última versão. `npm run demo:popular` autoriza o WhatsApp
+de todos os pacientes fictícios menos um, cujo lembrete aparece bloqueado. Detalhes em [docs/US-14.md](docs/US-14.md).

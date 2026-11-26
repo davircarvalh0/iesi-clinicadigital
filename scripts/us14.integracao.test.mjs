@@ -8,6 +8,9 @@ import { criarEnvelope, FILA_NOTIFICACAO } from '@clinica/eventos';
 // Requer Compose com CANAL_ENVIO=log e antecedência padrão (1440 min): consulta em 1h é enviada no próximo ciclo.
 const base = process.env.TEST_BASE_URL ?? 'http://localhost:8080';
 const rabbit = process.env.TEST_RABBITMQ_URL ?? 'amqp://clinica:clinica@localhost:5672';
+// US-12: envio concluído é 'simulado' (canal log) ou 'aceito_provedor' (WhatsApp); 'enviado' é só legado.
+const ENVIO_CONCLUIDO = new Set(['simulado', 'aceito_provedor']);
+const ACOES_ENVIO = new Set(['lembrete.enviado', 'lembrete.simulado', 'lembrete.aceito_provedor']);
 
 async function api(rota, { method = 'GET', body } = {}) {
   const resposta = await fetch(`${base}/api/${rota}`, {
@@ -82,7 +85,7 @@ test('US-14 CA2 (autorizado): com autorização de WhatsApp o lembrete é enviad
   await registrar(id, 'whatsapp', 'autorizado');
   await aguardarCopia(id, 1);
   const consulta = await agendar(cpf, emHoras(1));
-  const l = await aguardar(() => lembrete(consulta), (x) => x?.status === 'enviado', 'lembrete enviado');
+  const l = await aguardar(() => lembrete(consulta), (x) => ENVIO_CONCLUIDO.has(x?.status), 'lembrete enviado');
   assert.equal(l.motivoFalha, null);
 });
 
@@ -95,7 +98,7 @@ test('US-14 CA2 (desconhecido): sem registro o envio é bloqueado, mesmo com out
   assert.match(l.motivoFalha, /sem autorização de contato por WhatsApp/);
   const { dados: atividades } = await api('notificacao/atividades?limite=100');
   assert.ok(atividades.some((a) => a.idConsulta === consulta && a.acao === 'lembrete.bloqueado'));
-  assert.ok(!atividades.some((a) => a.idConsulta === consulta && a.acao === 'lembrete.enviado'));
+  assert.ok(!atividades.some((a) => a.idConsulta === consulta && ACOES_ENVIO.has(a.acao)));
 });
 
 test('US-14 CA2 (negado): recusa registrada como primeira decisão bloqueia o envio', { timeout: 120000 }, async () => {
@@ -147,7 +150,7 @@ test('US-14 CA3 (revogado): revogação propagada antes do envio bloqueia; nova 
 
   await registrar(id, 'whatsapp', 'autorizado', 'formulario');
   await aguardarCopia(id, 3);
-  await aguardar(() => lembrete(consulta), (x) => x?.status === 'enviado', 'lembrete liberado e enviado');
+  await aguardar(() => lembrete(consulta), (x) => ENVIO_CONCLUIDO.has(x?.status), 'lembrete liberado e enviado');
 });
 
 test('US-14 CA3: inconsistência de sincronização é visível e converge quando a Notificação volta', { timeout: 120000 }, async () => {

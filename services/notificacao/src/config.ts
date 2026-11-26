@@ -22,4 +22,6 @@ export const config = {
     idioma: process.env.WHATSAPP_TEMPLATE_LANG ?? 'en_US',
     versaoApi: process.env.WHATSAPP_API_VERSION ?? 'v21.0',
   },
+  /** Rotas /operacao (inspeção e reprocessamento da fila de erros): só no ambiente de demonstração. */
+  operacaoHabilitada: process.env.OPERACAO_HABILITADA === 'true',
 } as const;

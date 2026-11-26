@@ -21,6 +21,8 @@ model Consulta {
   pacienteCpf      String         @map("paciente_cpf")
   pacienteTelefone String         @map("paciente_telefone")
   pacienteRevisao  Int?           @map("paciente_revisao")
+  /// US-11: incrementada a cada remarcação e cancelamento, na mesma transação do evento.
+  sequencia        Int            @default(1)
   profissional     String
   especialidade    String
   inicio           DateTime       @db.Timestamptz(3)

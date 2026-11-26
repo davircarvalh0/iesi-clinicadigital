@@ -19,5 +19,7 @@ export class FalhaEnvio extends Error {}
 /** Porta de saída para sistemas de terceiros. O modelo interno nunca conhece a API do provedor. */
 export interface CanalEnvio {
   readonly nome: ResultadoEnvio['canalEnvio'];
+  /** Canal cuja autorização do paciente é exigida antes do envio (US-14), no envio real e no simulado. */
+  readonly canalContato: CanalContato;
   enviar(mensagem: MensagemLembrete): Promise<ResultadoEnvio>;
 }

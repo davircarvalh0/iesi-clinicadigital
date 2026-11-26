@@ -1,7 +1,8 @@
 // Formato das respostas HTTP dos serviços (não confundir com os eventos do barramento).
 
 export type StatusConsulta = 'agendada' | 'cancelada';
-export type StatusLembrete = 'programado' | 'enviado' | 'simulado' | 'aceito_provedor' | 'falhou' | 'cancelado';
+export type StatusLembrete =
+  | 'programado' | 'enviando' | 'enviado' | 'simulado' | 'aceito_provedor' | 'falhou' | 'cancelado' | 'bloqueado';
 
 export interface Consulta {
   id: string;

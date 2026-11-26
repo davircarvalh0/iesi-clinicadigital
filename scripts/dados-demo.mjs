@@ -56,3 +56,9 @@ export function consultasDemo(agora = Date.now()) {
 }
 
 export const PACIENTES_DEMO = PACIENTES;
+
+/**
+ * US-14: pacientes da demonstração que NÃO registram autorização de WhatsApp. O lembrete deles
+ * aparece como "Lembrete bloqueado", mostrando que sem autorização não há envio.
+ */
+export const CPFS_SEM_AUTORIZACAO_DEMO = new Set([joao.cpf]);

@@ -5,7 +5,7 @@
 // - Banco vazio: agenda 6 consultas (5 pacientes), cancela 1 e confere a propagação nos três serviços.
 // - Agenda já populada: não grava nada e só confere/mostra o resumo (pode rodar de novo sem duplicar).
 // A saída mostra apenas contagens e estados, nunca nome, CPF ou telefone.
-import { consultasDemo, PACIENTES_DEMO } from './dados-demo.mjs';
+import { consultasDemo, CPFS_SEM_AUTORIZACAO_DEMO, PACIENTES_DEMO } from './dados-demo.mjs';
 
 const BASE = (process.env.DEMO_BASE_URL ?? `http://localhost:${process.env.RECEPCAO_PORTA ?? 8080}`).replace(/\/$/, '');
 const PRAZO_MS = Number(process.env.DEMO_PRAZO_MS ?? 90_000);
@@ -76,6 +76,22 @@ const resumo = await aguardar('propagação para Cadastro e Notificação', asyn
     && pacientes.filter((p) => cpfsDemo.has(p.cpf)).length === new Set(demo.map((c) => c.pacienteCpf)).size;
   return pronto && { consultas, demo, lembretes, lembretesDemo, total };
 });
+
+// US-14: sem autorização registrada não há envio. Registra a autorização de WhatsApp dos pacientes
+// fictícios, exceto o que fica de propósito sem registro (lembrete bloqueado na tela). Só grava
+// quando o canal está "sem_registro": rodar de novo não cria versões nem desfaz uma revogação feita na tela.
+const idPorCpf = new Map(resumo.demo.map((c) => [c.pacienteCpf, c.idPaciente]));
+let autorizados = 0;
+for (const [cpf, idPaciente] of idPorCpf) {
+  if (CPFS_SEM_AUTORIZACAO_DEMO.has(cpf)) continue;
+  const { autorizacoes = [] } = await chamar(`/api/cadastro/pacientes/${idPaciente}`);
+  if (autorizacoes.find((a) => a.canal === 'whatsapp')?.situacao !== 'sem_registro') continue;
+  await chamar(`/api/cadastro/pacientes/${idPaciente}/autorizacoes`, {
+    method: 'POST', body: JSON.stringify({ canal: 'whatsapp', situacao: 'autorizado', origem: 'presencial' }),
+  });
+  autorizados += 1;
+}
+console.log(`Autorizações de WhatsApp registradas agora: ${autorizados} (1 paciente fica sem registro de propósito).`);
 
 const pacientesVinculados = new Set(resumo.demo.map((c) => c.idPaciente)).size;
 console.log([

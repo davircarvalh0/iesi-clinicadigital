@@ -16,7 +16,8 @@ const consulta = (dados: Partial<Consulta> = {}): Consulta => ({
 });
 const lembrete = (dados: Partial<Lembrete> = {}): Lembrete => ({
   id: 'l1', idConsulta: 'c1', status: 'programado', inicioConsulta: INICIO,
-  enviarEm: '2026-11-30T13:00:00.000Z', enviadoEm: null, motivoFalha: null, ...dados,
+  enviarEm: '2026-11-30T13:00:00.000Z', enviadoEm: null, motivoFalha: null, antecedenciaMinutos: 1440,
+  modoEnvio: null, canalEnvio: null, idExterno: null, tentativas: 0, ...dados,
 });
 const nada = () => {};
 
@@ -88,6 +89,21 @@ describe('CA3: sincronização pendente', () => {
     const html = item(consulta({ status: 'cancelada' }), { lembrete: lembrete({ status: 'cancelado' }) });
     assert.doesNotMatch(html, /Sincronização pendente/);
     assert.match(html, /Lembrete cancelado/);
+  });
+  test('cancelada com envio simulado já concluído: sem pendência eterna', () => {
+    const html = item(consulta({ status: 'cancelada' }), { lembrete: lembrete({ status: 'simulado', modoEnvio: 'simulado', canalEnvio: 'log' }) });
+    assert.doesNotMatch(html, /Sincronização pendente/);
+    assert.match(html, /Envio simulado/);
+  });
+  test('envio em andamento (US-11) e bloqueio (US-14) têm selo próprio, com motivo', () => {
+    assert.match(item(consulta(), { lembrete: lembrete({ status: 'enviando' }) }), /Envio em andamento/);
+    const bloqueado = item(consulta(), { lembrete: lembrete({ status: 'bloqueado', motivoFalha: 'Sem envio: autorização revogada' }) });
+    assert.match(bloqueado, /Lembrete bloqueado/);
+    assert.match(bloqueado, /Sem envio: autorização revogada/);
+  });
+  test('antecedência de demonstração (US-10) aparece; padrão de 24 h não', () => {
+    assert.match(item(consulta(), { lembrete: lembrete({ antecedenciaMinutos: 2 }) }), /antecedência de 2 min/);
+    assert.doesNotMatch(item(consulta(), { lembrete: lembrete() }), /Demonstração/);
   });
   test('remarcada e ainda não processada: pendente com o horário anterior', () => {
     const html = item(consulta({ inicio: '2026-12-02T13:00:00.000Z' }), { lembrete: lembrete() });

@@ -13,7 +13,8 @@ const consulta = (dados: Partial<Consulta> = {}): Consulta => ({
 });
 const lembrete = (dados: Partial<Lembrete> = {}): Lembrete => ({
   id: 'l1', idConsulta: 'c1', status: 'programado', inicioConsulta: INICIO,
-  enviarEm: '2026-11-30T13:00:00.000Z', enviadoEm: null, motivoFalha: null, ...dados,
+  enviarEm: '2026-11-30T13:00:00.000Z', enviadoEm: null, motivoFalha: null, antecedenciaMinutos: 1440,
+  modoEnvio: null, canalEnvio: null, idExterno: null, tentativas: 0, ...dados,
 });
 
 describe('situacaoDe (US-18-T2)', () => {
@@ -52,12 +53,12 @@ describe('pendenciaDoLembrete (US-18 CA3)', () => {
   test('sem inicioConsulta na resposta, não inventa pendência de remarcação', () => {
     assert.equal(pendenciaDoLembrete(consulta({ inicio: '2026-12-02T13:00:00.000Z' }), lembrete({ inicioConsulta: undefined })), null);
   });
-  for (const status of ['programado', 'falhou'] as const) {
+  for (const status of ['programado', 'enviando', 'falhou', 'bloqueado'] as const) {
     test(`cancelada com lembrete ${status}: cancelamento pendente`, () => {
       assert.equal(pendenciaDoLembrete(consulta({ status: 'cancelada' }), lembrete({ status })), 'cancelamento');
     });
   }
-  for (const status of ['cancelado', 'enviado'] as const) {
+  for (const status of ['cancelado', 'enviado', 'simulado', 'aceito_provedor'] as const) {
     test(`cancelada com lembrete ${status}: nada pendente`, () => {
       assert.equal(pendenciaDoLembrete(consulta({ status: 'cancelada' }), lembrete({ status })), null);
     });

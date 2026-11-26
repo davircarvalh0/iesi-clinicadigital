@@ -9,10 +9,13 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:us10": "tsx --test test/us10.test.ts",
+    "test:us11": "tsx --test test/us11.test.ts",
     "test:us12": "tsx --test test/us12.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "test": "tsx --test --test-concurrency=1 test/*.test.ts",
+    "test:us14": "tsx --test test/us14-rotina.test.ts"
   },
   "dependencies": {
     "@clinica/eventos": "*",

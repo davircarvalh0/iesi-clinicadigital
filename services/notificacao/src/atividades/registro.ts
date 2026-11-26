@@ -5,6 +5,8 @@ export type Acao =
   | 'lembrete.programado'
   | 'lembrete.reprogramado'
   | 'lembrete.cancelado'
+  | 'lembrete.evento_obsoleto'
+  | 'lembrete.corrida_envio'
   | 'lembrete.expirado'
   | 'lembrete.simulado'
   | 'lembrete.aceito_provedor'
@@ -17,7 +19,9 @@ export type Acao =
   | 'evento.nova_tentativa'
   | 'evento.rejeitado'
   | 'consumo.pausado'
-  | 'consumo.retomado';
+  | 'consumo.retomado'
+  | 'reprocessamento.solicitado'
+  | 'reprocessamento.falhou';
 
 export interface DadosAtividade {
   acao: Acao;
