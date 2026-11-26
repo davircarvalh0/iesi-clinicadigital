@@ -53,6 +53,7 @@ model Lembrete {
   idExterno           String?        @map("id_externo")
   /// US-11: sequência do último evento de consulta aplicado; nulo quando só eventos sem sequência foram recebidos.
   sequenciaAplicada   Int?           @map("sequencia_aplicada")
+  tentativasEnvio     TentativaEnvio[]
   criadoEm            DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -106,6 +107,7 @@ model Atividade {
   ocorridoEm DateTime @default(now()) @map("ocorrido_em") @db.Timestamptz(3)
 
   @@index([ocorridoEm])
+  @@index([idConsulta, ocorridoEm])
   @@map("atividades")
 }
 
@@ -127,4 +129,36 @@ model Reprocessamento {
 
   @@index([idEvento])
   @@map("reprocessamentos")
+}
+
+enum ResultadoTentativa {
+  /// A tentativa foi registrada antes da chamada ao canal e ainda não tem desfecho gravado.
+  em_andamento
+  simulado
+  aceito_provedor
+  falhou
+}
+
+/// US-13: cada chamada ao canal de envio, em ordem. Não guarda nome, CPF nem telefone.
+/// Sobrevive à remarcação (o lembrete zera os campos do resultado, a trilha fica).
+model TentativaEnvio {
+  id               String             @id @default(uuid())
+  idLembrete       String             @map("id_lembrete")
+  lembrete         Lembrete           @relation(fields: [idLembrete], references: [id], onDelete: Cascade)
+  idConsulta       String             @map("id_consulta")
+  /// Evento de consulta que programou ou remarcou o lembrete no momento da tentativa.
+  idEventoConsulta String?            @map("id_evento_consulta")
+  /// Número da tentativa dentro da programação atual (reinicia na remarcação, como `tentativas`).
+  numero           Int
+  canal            CanalLembrete
+  modo             ModoEnvio
+  resultado        ResultadoTentativa @default(em_andamento)
+  idExterno        String?            @map("id_externo")
+  motivo           String?
+  iniciadaEm       DateTime           @default(now()) @map("iniciada_em") @db.Timestamptz(3)
+  concluidaEm      DateTime?          @map("concluida_em") @db.Timestamptz(3)
+
+  @@index([idConsulta, iniciadaEm])
+  @@index([idLembrete])
+  @@map("tentativas_envio")
 }

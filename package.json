@@ -20,6 +20,7 @@
     "test:us08": "node --test scripts/us08.integracao.test.mjs",
     "test:us09": "node --test scripts/us09.integracao.test.mjs",
     "test:us11": "node --test scripts/us11.integracao.test.mjs",
+    "test:us13": "node --test scripts/us13.integracao.test.mjs",
     "test:us14": "node --test scripts/us14.integracao.test.mjs",
     "test:us16": "node --test scripts/us16.integracao.test.mjs",
     "test:us17": "node --test scripts/us17.integracao.test.mjs",

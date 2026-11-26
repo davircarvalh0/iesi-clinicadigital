@@ -27,6 +27,9 @@ const ATIVIDADES: Record<string, { titulo: string; tom: TomSelo }> = {
   'lembrete.simulado': { titulo: 'Envio simulado', tom: 'neutro' },
   'lembrete.aceito_provedor': { titulo: 'Aceito pelo WhatsApp', tom: 'sucesso' },
   'lembrete.falhou': { titulo: 'Lembrete falhou', tom: 'perigo' },
+  'lembrete.bloqueado': { titulo: 'Lembrete bloqueado', tom: 'alerta' },
+  'lembrete.liberado': { titulo: 'Lembrete liberado', tom: 'marca' },
+  'autorizacao.atualizada': { titulo: 'Autorização de contato atualizada', tom: 'info' },
   'envio.nova_tentativa': { titulo: 'Erro no envio, tentando de novo', tom: 'alerta' },
   'evento.duplicado': { titulo: 'Evento duplicado ignorado', tom: 'neutro' },
   'evento.nova_tentativa': { titulo: 'Erro ao processar, nova tentativa', tom: 'alerta' },
@@ -36,6 +39,11 @@ const ATIVIDADES: Record<string, { titulo: string; tom: TomSelo }> = {
   'reprocessamento.solicitado': { titulo: 'Reprocessamento solicitado', tom: 'marca' },
   'reprocessamento.falhou': { titulo: 'Reprocessamento não confirmado', tom: 'perigo' },
 };
+
+/** Título e tom de uma atividade da Notificação; ações desconhecidas aparecem pelo código. */
+export function rotuloAtividade(acao: string): { titulo: string; tom: TomSelo } {
+  return ATIVIDADES[acao] ?? { titulo: acao, tom: 'neutro' };
+}
 
 /** Junta o que o Agendamento publicou e o que a Notificação fez numa linha do tempo única. */
 export function montarFeed(eventos: EventoPublicado[], atividades: Atividade[]): ItemFeed[] {

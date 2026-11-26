@@ -95,17 +95,39 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
     // programação e tentativas lidas acima. Só quem reserva chama o canal; um cancelamento ou
     // remarcação concorrente, ao encontrar 'enviando', não reverte o resultado do envio em curso
     // (ver lembretes/servico.ts).
+    // US-13: a tentativa é registrada na mesma transação da reserva, antes da chamada ao canal.
+    // Se o processo cair durante a chamada, a trilha mostra uma tentativa sem desfecho.
     const tentativas = atual.tentativas + 1;
-    const reserva = await prisma.lembrete.updateMany({ where: { ...programacao, tentativas: atual.tentativas }, data: { status: 'enviando' } });
-    if (!reserva.count) return; // o estado mudou entre a leitura e a reserva (ou outra execução já a tomou)
+    const modo = canal.nome === 'log' ? 'simulado' as const : 'real' as const;
+    const idTentativa = await prisma.$transaction(async (tx) => {
+      const reserva = await tx.lembrete.updateMany({ where: { ...programacao, tentativas: atual.tentativas }, data: { status: 'enviando' } });
+      if (!reserva.count) return null; // o estado mudou entre a leitura e a reserva (ou outra execução já a tomou)
+      const registro = await tx.tentativaEnvio.create({
+        data: {
+          idLembrete: atual.id, idConsulta: atual.idConsulta, idEventoConsulta: atual.idEventoConsulta,
+          numero: tentativas, canal: canal.nome, modo,
+        },
+        select: { id: true },
+      });
+      return registro.id;
+    });
+    if (!idTentativa) return;
+    const idLembrete = atual.id;
+    const tentativaRegistrada = idTentativa;
 
     const tentativa = await tentarEnvio(canal, atual);
 
-    // Só grava o resultado se este processo ainda detiver a reserva: preserva a verdade do envio
-    // já realizado mesmo que um cancelamento tenha chegado durante a chamada ao canal.
-    async function finalizarReserva(id: string, dados: Prisma.LembreteUpdateManyMutationInput, atividade: DadosAtividade) {
+    // O desfecho real sempre vai para a trilha (US-13). O lembrete só recebe o resultado se este
+    // processo ainda detiver a reserva: preserva a verdade do envio já realizado mesmo que um
+    // cancelamento tenha chegado durante a chamada ao canal.
+    async function finalizarReserva(
+      dados: Prisma.LembreteUpdateManyMutationInput,
+      atividade: DadosAtividade,
+      desfecho: Prisma.TentativaEnvioUpdateInput,
+    ) {
       return prisma.$transaction(async (tx) => {
-        const { count } = await tx.lembrete.updateMany({ where: { id, status: 'enviando' }, data: dados });
+        await tx.tentativaEnvio.update({ where: { id: tentativaRegistrada }, data: { ...desfecho, concluidaEm: new Date() } });
+        const { count } = await tx.lembrete.updateMany({ where: { id: idLembrete, status: 'enviando' }, data: dados });
         if (count) await registrarAtividade(atividade, tx);
         return count > 0;
       });
@@ -113,23 +135,22 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
 
     if (tentativa.ok) {
       const resultado = tentativa.resultado;
-      await finalizarReserva(atual.id, { ...resultado, enviadoEm: new Date(), tentativas, motivoFalha: null }, {
+      await finalizarReserva({ ...resultado, enviadoEm: new Date(), tentativas, motivoFalha: null }, {
         ...base,
         acao: resultado.status === 'simulado' ? 'lembrete.simulado' : 'lembrete.aceito_provedor',
         descricao: resultado.status === 'simulado'
           ? 'Envio simulado em log'
           : 'WhatsApp aceitou a mensagem para processamento',
-      });
+      }, { resultado: resultado.status, idExterno: resultado.idExterno });
       return;
     }
 
     const novaTentativa = tentativas < maxTentativas;
     const registrado = await finalizarReserva(
-      atual.id,
       {
         status: novaTentativa ? 'programado' : 'falhou',
         canalEnvio: canal.nome,
-        modoEnvio: canal.nome === 'log' ? 'simulado' : 'real',
+        modoEnvio: modo,
         tentativas,
         motivoFalha: tentativa.motivo,
       },
@@ -138,6 +159,7 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
         acao: novaTentativa ? 'envio.nova_tentativa' : 'lembrete.falhou',
         descricao: `Tentativa ${tentativas} de ${maxTentativas}: ${tentativa.motivo}`,
       },
+      { resultado: 'falhou', motivo: tentativa.motivo },
     );
     if (!registrado || !novaTentativa) return;
     await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * tentativas, 30_000)));

@@ -9,7 +9,7 @@ import { descreverModo } from '../src/lembretes/rotulos';
 import { PainelLembretes } from '../src/lembretes/TelaLembretes';
 import { telaDoHash } from '../src/navegacao';
 import type { Leitura } from '../src/sincronizacao';
-import type { ItemPainelLembrete, PaginaLembretes } from '../src/tipos';
+import type { ItemPainelLembrete, PaginaLembretes, TrilhaLembrete } from '../src/tipos';
 
 // Dia fixo para os cálculos de período: daqui(n) devolve 2026-11-(24+n).
 const daqui = (n: number) => `2026-11-${String(24 + n).padStart(2, '0')}`;
@@ -114,5 +114,65 @@ describe('tela de lembretes (US-09 CA1 e CA3)', () => {
     assert.match(tela(filtro(), { dados: { consulta: 'q', pagina: pagina([]) }, erro: null, atualizadoEm: AGORA }), /Nenhum lembrete com estes filtros/);
     const html = tela(filtro(), { dados: { consulta: 'q', pagina: pagina([item()], 45) }, erro: null, atualizadoEm: AGORA });
     assert.match(html, /Página 1 de 3/);
+  });
+});
+
+describe('trilha do lembrete (US-13)', async () => {
+  const { linhaDoTempo } = await import('../src/lembretes/trilha');
+  const { ConteudoTrilha } = await import('../src/lembretes/TrilhaLembrete');
+  const { ItemLembrete } = await import('../src/lembretes/TelaLembretes');
+  const trilha: TrilhaLembrete = {
+    lembrete: {
+      id: 'l1', idConsulta: 'c1', status: 'aceito_provedor', enviarEm: '2026-11-24T10:00:00.000Z', enviadoEm: '2026-11-24T10:00:03.000Z',
+      tentativas: 2, motivoFalha: null, modoEnvio: 'real', canalEnvio: 'whatsapp', idExterno: 'wamid.x',
+      inicioConsulta: '2026-11-25T10:00:00.000Z', idEventoConsulta: 'e1',
+    },
+    tentativas: [
+      { id: 't2', numero: 2, idEventoConsulta: 'e1', canal: 'whatsapp', modo: 'real', resultado: 'aceito_provedor', idExterno: 'wamid.x', motivo: null, iniciadaEm: '2026-11-24T10:00:02.000Z', concluidaEm: '2026-11-24T10:00:02.400Z' },
+      { id: 't1', numero: 1, idEventoConsulta: 'e1', canal: 'whatsapp', modo: 'real', resultado: 'falhou', idExterno: null, motivo: 'WhatsApp respondeu HTTP 503', iniciadaEm: '2026-11-24T10:00:00.000Z', concluidaEm: '2026-11-24T10:00:01.500Z' },
+    ],
+    atividades: [
+      { id: 'a3', acao: 'lembrete.aceito_provedor', descricao: 'WhatsApp aceitou a mensagem para processamento', idEvento: 'e1', ocorridoEm: '2026-11-24T10:00:02.400Z' },
+      { id: 'a1', acao: 'lembrete.programado', descricao: 'Envio previsto', idEvento: 'e1', ocorridoEm: '2026-11-23T09:00:00.000Z' },
+      { id: 'a2', acao: 'envio.nova_tentativa', descricao: 'Tentativa 1 de 3: WhatsApp respondeu HTTP 503', idEvento: 'e1', ocorridoEm: '2026-11-24T10:00:01.500Z' },
+    ],
+  };
+
+  test('CA2: linha do tempo intercala atividades e tentativas em ordem cronológica', () => {
+    assert.deepEqual(linhaDoTempo(trilha).map((e) => e.titulo), [
+      'Lembrete programado', 'Tentativa 1: falhou', 'Erro no envio, tentando de novo', 'Tentativa 2: aceito pelo WhatsApp', 'Aceito pelo WhatsApp',
+    ]);
+    const [, primeira, , segunda] = linhaDoTempo(trilha);
+    assert.equal(primeira.detalhe, 'Real · WhatsApp · 1,5 s · WhatsApp respondeu HTTP 503');
+    assert.equal(segunda.detalhe, 'Real · WhatsApp · 400 ms · identificador wamid.x');
+  });
+  test('CA3: tentativa sem conclusão aparece sem desfecho, nunca como sucesso ou falha', () => {
+    const emCurso = { ...trilha, tentativas: [{ ...trilha.tentativas[1], resultado: 'em_andamento' as const, concluidaEm: null, motivo: null }], atividades: [] };
+    const [entrada] = linhaDoTempo(emCurso);
+    assert.equal(entrada.titulo, 'Tentativa 1: sem desfecho registrado');
+    assert.equal(entrada.tom, 'alerta');
+    assert.equal(entrada.detalhe, 'Real · WhatsApp');
+  });
+  test('ação desconhecida aparece pelo código, sem quebrar', () => {
+    const [entrada] = linhaDoTempo({ ...trilha, tentativas: [], atividades: [{ id: 'x', acao: 'acao.nova', descricao: '', idEvento: null, ocorridoEm: '2026-11-24T10:00:00.000Z' }] });
+    assert.equal(entrada.titulo, 'acao.nova');
+  });
+  test('renderização: estados de carregamento, erro e trilha pronta', () => {
+    const nada = () => {};
+    assert.match(renderToStaticMarkup(<ConteudoTrilha estado={{ fase: 'carregando' }} aoAtualizar={nada} />), /Carregando trilha…/);
+    const erro = renderToStaticMarkup(<ConteudoTrilha estado={{ fase: 'erro', motivo: 'sem conexão com o serviço' }} aoAtualizar={nada} />);
+    assert.match(erro, /role="alert"/);
+    assert.match(erro, /Não foi possível carregar a trilha \(sem conexão com o serviço\)/);
+    const pronta = renderToStaticMarkup(<ConteudoTrilha estado={{ fase: 'pronta', trilha, em: AGORA }} aoAtualizar={nada} />);
+    assert.match(pronta, /2 chamada\(s\) ao canal de envio/);
+    assert.match(pronta, /Tentativa 1: falhou/);
+    assert.match(pronta, /WhatsApp respondeu HTTP 503/);
+  });
+  test('o item da lista oferece a trilha e a abre sob demanda', () => {
+    const fechado = renderToStaticMarkup(<ItemLembrete lembrete={item()} />);
+    assert.match(fechado, /aria-expanded="false"[^>]*>.*Ver trilha/);
+    const aberto = renderToStaticMarkup(<ItemLembrete lembrete={item()} trilhaAberta />);
+    assert.match(aberto, /Ocultar trilha/);
+    assert.match(aberto, /Carregando trilha…/);
   });
 });
