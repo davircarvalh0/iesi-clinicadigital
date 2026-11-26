@@ -278,6 +278,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); o
 .sincronizacao__pendentes:empty { display: none; }
 .consulta__selos { flex-wrap: wrap; justify-content: flex-end; }
 .consulta__aviso { max-width: 340px; font-size: 12.5px; line-height: 1.4; color: var(--alerta); text-align: right; }
+.consulta__motivo { max-width: 340px; font-size: 12.5px; line-height: 1.4; color: var(--texto-suave); text-align: right; overflow-wrap: anywhere; }
 .consulta__resultado { max-width: 340px; padding: 6px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; text-align: right; }
 .consulta__resultado--ok { color: var(--sucesso); background: var(--sucesso-fundo); }
 .consulta__resultado--erro { color: var(--perigo); background: var(--perigo-fundo); }
@@ -309,7 +310,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--marca-forte); o
   .consulta { grid-template-columns: 48px 2px 40px minmax(0, 1fr); }
   .consulta > .consulta__lateral { grid-column: 1 / -1; grid-row: 2; align-items: flex-start; margin-top: 12px; }
   .consulta__selos { justify-content: flex-start; }
-  .consulta__aviso, .consulta__resultado { text-align: left; }
+  .consulta__aviso, .consulta__resultado, .consulta__motivo { text-align: left; }
 }
 
 /* ---------- Trilha do lembrete (US-13) ---------- */

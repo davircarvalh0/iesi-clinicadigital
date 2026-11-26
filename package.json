@@ -35,7 +35,8 @@
     "demo:popular": "node scripts/popular-demo.mjs",
     "ambiente:limpo": "node scripts/ambiente-limpo.mjs",
     "verificar": "node scripts/verificar.mjs",
-    "test:scripts": "node --test scripts/dados-demo.test.mjs scripts/contar-testes.test.mjs"
+    "test:scripts": "node --test scripts/dados-demo.test.mjs scripts/contar-testes.test.mjs",
+    "demo:ensaio": "node scripts/ensaio-defesa.mjs"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

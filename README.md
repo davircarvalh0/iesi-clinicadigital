@@ -167,3 +167,9 @@ chamada ao canal com o desfecho ([docs/US-13.md](docs/US-13.md)). O topo da tela
 **simulado** e por quê. No modo real, só os telefones de `WHATSAPP_DESTINOS_PERMITIDOS` recebem mensagem. Se o WhatsApp
 não responder depois do pedido, o lembrete fica **sem confirmação**. Ele não é repetido sozinho: a recepção decide na
 trilha entre reenviar ou manter sem reenvio, e a decisão fica registrada ([docs/US-15.md](docs/US-15.md)).
+
+## Defesa (US-24)
+
+`npm run demo:ensaio` confere, no ambiente no ar, os cinco resultados demonstráveis do Product Goal: vínculo mestre e
+programação, propagação de remarcação e cancelamento, duplicação sem efeito, recuperação após indisponibilidade e modo
+de envio explícito. O roteiro proposto, o plano B e os limites a declarar estão em [docs/US-24.md](docs/US-24.md).

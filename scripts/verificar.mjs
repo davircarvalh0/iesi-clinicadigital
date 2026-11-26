@@ -14,6 +14,7 @@
 //   5. Limpeza: remove containers e volumes do projeto isolado (exceto com --manter).
 // Termina com código 1 se qualquer etapa falhar.
 import { spawn } from 'node:child_process';
+import { connect } from 'node:net';
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { hostname, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -121,6 +122,8 @@ if (!RAPIDO) {
   const noAr = await etapa('2. Ambiente', 'Compose isolado do zero (up --build --wait)', 'docker', [...COMPOSE, 'up', '-d', '--build', '--wait'], { timeoutMs: 1_200_000 });
 
   if (noAr) {
+    // O Docker Desktop pode demorar a encaminhar as portas publicadas depois do --wait (healthcheck é interno).
+    for (const porta of [PORTAS.DB_NOTIFICACAO_PORTA, PORTAS.DB_CADASTRO_PORTA]) await aguardarPorta(Number(porta));
     // Bancos de teste separados dos bancos que os serviços usam: os testes de banco ligam a própria rotina de envio.
     for (const [servico, url] of Object.entries(BANCO_TESTE)) {
       const banco = new URL(url).pathname.slice(1);
@@ -175,3 +178,20 @@ if (!ARGS.has('--sem-relatorio')) {
 }
 console.log(`[verificar] ${falhas.length ? 'FALHOU' : 'APROVADA'}: ${totais.pass}/${totais.total} testes aprovados`);
 process.exit(falhas.length ? 1 : 0);
+
+/** Espera até a porta do host aceitar conexão TCP (até 90 s); depois segue e deixa a etapa registrar a falha. */
+async function aguardarPorta(porta, prazoMs = 90_000) {
+  const limite = Date.now() + prazoMs;
+  while (Date.now() < limite) {
+    const aberta = await new Promise((ok) => {
+      const s = connect({ host: '127.0.0.1', port: porta });
+      s.once('connect', () => { s.end(); ok(true); });
+      s.once('error', () => ok(false));
+      s.setTimeout(2000, () => { s.destroy(); ok(false); });
+    });
+    if (aberta) return true;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  console.log(`[verificar] porta ${porta} não respondeu em ${prazoMs / 1000} s`);
+  return false;
+}
