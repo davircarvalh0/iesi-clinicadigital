@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { esquemaFiltroPainel, listarPainel } from './painel';
 import { listarLembretes } from './servico';
 
 export const rotasLembretes = Router();
@@ -7,4 +8,9 @@ export const rotasLembretes = Router();
 rotasLembretes.get('/', async (req, res) => {
   const idConsulta = typeof req.query.consulta === 'string' ? req.query.consulta : undefined;
   res.json(await listarLembretes({ idConsulta }));
+});
+
+// US-09: GET /lembretes/painel?situacao=falhou,bloqueado&de=AAAA-MM-DD&ate=AAAA-MM-DD&pagina=1&tamanhoPagina=20
+rotasLembretes.get('/painel', async (req, res) => {
+  res.json(await listarPainel(esquemaFiltroPainel.parse(req.query)));
 });

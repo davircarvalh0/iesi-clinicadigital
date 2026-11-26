@@ -1,23 +1,13 @@
 import { Bell, BellOff, CircleHelp, Clock, RotateCcw, X } from 'lucide-react';
-import { Selo, type TomSelo } from '../componentes/Selo';
+import { Selo } from '../componentes/Selo';
 import { corDaEspecialidade } from '../dados/profissionais';
 import { dataHora, hora, horaComSegundos, iniciais, mascaraTelefone } from '../formatacao';
 import {
   pendenciaDoLembrete, situacaoDesconhecida, situacaoVelha,
   type AcaoCancelamento, type Pendencia, type Situacao,
 } from '../sincronizacao';
-import type { Consulta, Lembrete, StatusLembrete } from '../tipos';
-
-export const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string }> = {
-  programado: { tom: 'marca', texto: 'Lembrete programado' },
-  enviando: { tom: 'alerta', texto: 'Envio em andamento' },
-  enviado: { tom: 'neutro', texto: 'Resultado de envio sem classificação' },
-  simulado: { tom: 'neutro', texto: 'Envio simulado' },
-  aceito_provedor: { tom: 'sucesso', texto: 'Aceito pelo WhatsApp' },
-  falhou: { tom: 'perigo', texto: 'Lembrete falhou' },
-  cancelado: { tom: 'neutro', texto: 'Lembrete cancelado' },
-  bloqueado: { tom: 'alerta', texto: 'Lembrete bloqueado' },
-};
+import { SELO_LEMBRETE } from '../lembretes/rotulos';
+import type { Consulta, Lembrete } from '../tipos';
 
 const TEXTO_PENDENCIA: Record<Pendencia, string> = {
   programacao: 'Aguardando a Notificação programar o lembrete.',

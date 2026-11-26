@@ -2,6 +2,8 @@ import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cadastroApi } from './api/cadastro';
 import { TelaPacientes } from './pacientes/TelaPacientes';
+import { TelaLembretes } from './lembretes/TelaLembretes';
+import { TITULO_TELA, telaDoHash, type Tela } from './navegacao';
 import { agendamentoApi } from './api/agendamento';
 import { motivoDaFalha } from './api/http';
 import { notificacaoApi } from './api/notificacao';
@@ -28,9 +30,9 @@ const LIMITE_ATRASO_MS = 6000;
 const RECEPCIONISTA = 'Juliana';
 
 export function App() {
-  const [tela, setTela] = useState<'agenda' | 'pacientes'>(() => window.location.hash === '#pacientes' ? 'pacientes' : 'agenda');
+  const [tela, setTela] = useState<Tela>(() => telaDoHash(window.location.hash));
   useEffect(() => {
-    const navegar = () => setTela(window.location.hash === '#pacientes' ? 'pacientes' : 'agenda');
+    const navegar = () => setTela(telaDoHash(window.location.hash));
     window.addEventListener('hashchange', navegar);
     return () => window.removeEventListener('hashchange', navegar);
   }, []);
@@ -97,7 +99,7 @@ export function App() {
             <p className="cabecalho__saudacao">
               {saudacao()}, {RECEPCIONISTA} · {diaPorExtenso(new Date())}
             </p>
-            <h1 className="cabecalho__titulo">{tela === 'agenda' ? 'Agenda' : 'Pacientes'}</h1>
+            <h1 className="cabecalho__titulo">{TITULO_TELA[tela]}</h1>
           </div>
           {tela === 'agenda' && <button className="botao botao--primario botao--destaque" onClick={() => setModal({ tipo: 'nova' })}>
             <Plus size={18} strokeWidth={2.5} /> Nova consulta
@@ -132,7 +134,9 @@ export function App() {
         <Indicadores consultas={listaConsultas} lembretes={lembretes.dados ?? []}
           situacaoConsultas={situacaoConsultas} situacaoLembretes={situacaoLembretes}
           totalPacientes={cadastro.dados?.total} cadastroIndisponivel={!!cadastro.erro} />
-        {tela === 'pacientes' ? <TelaPacientes aoAtualizar={() => { void cadastro.recarregar(); }} /> : <ListaConsultas
+        {tela === 'pacientes' && <TelaPacientes aoAtualizar={() => { void cadastro.recarregar(); }} />}
+        {tela === 'lembretes' && <TelaLembretes />}
+        {tela === 'agenda' && <ListaConsultas
           consultas={listaConsultas}
           lembretePorConsulta={lembretePorConsulta}
           situacaoLembretes={situacaoLembretes}

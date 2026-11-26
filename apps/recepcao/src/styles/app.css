@@ -230,6 +230,21 @@ button.chip:hover { filter: brightness(0.96); }
 .pacientes__paginacao { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; font-size: 13px; }
 .pacientes__estado { display: grid; gap: 16px; padding: 20px; justify-items: start; }
 .pacientes__mensagem { margin: 0 20px 16px; color: var(--sucesso); background: var(--sucesso-fundo); }
+
+/* ---------- Lembretes (US-09) ---------- */
+.lembretes .lista__titulo { display: flex; align-items: center; gap: 8px; }
+.lembretes__filtros { display: grid; gap: 10px; padding: 0 20px 18px; }
+.lembretes__grupo { display: flex; flex-wrap: wrap; gap: 8px; }
+.lembretes__grupo .chip { cursor: pointer; }
+.lembretes__grupo .chip:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
+.lembretes__aviso { margin: 0 20px 12px; }
+.lembretes__lista { list-style: none; padding: 0; margin: 0; }
+.lembrete { display: flex; gap: 16px; padding: 18px 20px; align-items: flex-start; border-top: 1px solid var(--borda-suave); }
+.lembrete__quando { display: flex; flex-direction: column; min-width: 92px; font-size: 13px; color: var(--texto-suave); }
+.lembrete__quando time { font-size: 18px; font-weight: 700; color: var(--texto); }
+.lembrete__motivo { color: var(--perigo); }
+.lembrete__selos { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+@media (max-width: 720px) { .lembrete { flex-wrap: wrap; } .lembrete__selos { align-items: flex-start; } }
 .dialogo-contato { border: 0; padding: 0; border-radius: 20px; width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 32px); color: var(--texto); }
 .dialogo-contato::backdrop { background: rgba(26, 48, 46, 0.32); backdrop-filter: blur(6px); }
 .dialogo-contato .modal { width: 100%; }

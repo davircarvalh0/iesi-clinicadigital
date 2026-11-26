@@ -149,3 +149,10 @@ informada pelo paciente, com a origem (presencial, telefone, formulário). **Sem
 confere sua cópia da autorização antes de cada tentativa de envio e marca *Lembrete bloqueado* quando ela é desconhecida ou
 revogada. O modal mostra se a cópia da Notificação já recebeu a última versão. `npm run demo:popular` autoriza o WhatsApp
 de todos os pacientes fictícios menos um, cujo lembrete aparece bloqueado. Detalhes em [docs/US-14.md](docs/US-14.md).
+
+## Lista de lembretes (US-09)
+
+Na barra lateral, **Lembretes** abre uma tela própria com os lembretes de hoje, dos próximos ou dos últimos 7 dias, ou de
+todo o período. Dá para filtrar por uma ou mais situações e ver quantos lembretes há em cada uma. Cada item mostra a
+consulta, a previsão ou a conclusão do envio, o modo (real ou simulado), as tentativas e o motivo, sem CPF nem telefone.
+A API é `GET /api/notificacao/lembretes/painel`; detalhes em [docs/US-09.md](docs/US-09.md).

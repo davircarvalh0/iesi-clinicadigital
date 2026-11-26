@@ -1,6 +1,13 @@
 import { Bell, Calendar, Plus, Users } from 'lucide-react';
+import type { Tela } from '../navegacao';
 
-export function BarraLateral({ consultasHoje, tela }: { consultasHoje: number; tela: 'agenda' | 'pacientes' }) {
+const ITENS: { tela: Tela; texto: string; Icone: typeof Calendar }[] = [
+  { tela: 'agenda', texto: 'Agenda', Icone: Calendar },
+  { tela: 'pacientes', texto: 'Pacientes', Icone: Users },
+  { tela: 'lembretes', texto: 'Lembretes', Icone: Bell },
+];
+
+export function BarraLateral({ consultasHoje, tela }: { consultasHoje: number; tela: Tela }) {
   return (
     <aside className="barra-lateral">
       <div className="marca">
@@ -15,16 +22,13 @@ export function BarraLateral({ consultasHoje, tela }: { consultasHoje: number; t
 
       <p className="barra-lateral__secao">Recepção</p>
       <nav className="menu">
-        <a className={`menu__item ${tela === 'agenda' ? 'menu__item--ativo' : ''}`} href="#agenda" aria-current={tela === 'agenda' ? 'page' : undefined}>
-          <Calendar size={19} /> Agenda
-          <span className="menu__contador">{consultasHoje}</span>
-        </a>
-        <a className={`menu__item ${tela === 'pacientes' ? 'menu__item--ativo' : ''}`} href="#pacientes" aria-current={tela === 'pacientes' ? 'page' : undefined}>
-          <Users size={19} /> Pacientes
-        </a>
-        <a className="menu__item" href="#" onClick={(e) => e.preventDefault()}>
-          <Bell size={19} /> Lembretes
-        </a>
+        {ITENS.map(({ tela: destino, texto, Icone }) => (
+          <a key={destino} className={`menu__item ${tela === destino ? 'menu__item--ativo' : ''}`} href={`#${destino}`}
+            aria-current={tela === destino ? 'page' : undefined}>
+            <Icone size={19} /> {texto}
+            {destino === 'agenda' && <span className="menu__contador">{consultasHoje}</span>}
+          </a>
+        ))}
       </nav>
     </aside>
   );

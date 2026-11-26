@@ -71,3 +71,31 @@ export interface EstadoConsumo {
   consumindo: boolean;
   naFila: number;
 }
+
+/** Item de GET /lembretes/painel (US-09): sem CPF e sem telefone. */
+export interface ItemPainelLembrete {
+  id: string;
+  idConsulta: string;
+  pacienteNome: string;
+  profissional: string;
+  especialidade: string;
+  inicioConsulta: string;
+  enviarEm: string;
+  antecedenciaMinutos: number | null;
+  status: StatusLembrete;
+  tentativas: number;
+  motivoFalha: string | null;
+  enviadoEm: string | null;
+  modoEnvio: 'simulado' | 'real' | null;
+  canalEnvio: 'log' | 'whatsapp' | null;
+  idExterno: string | null;
+  atualizadoEm: string;
+}
+
+export interface PaginaLembretes {
+  itens: ItemPainelLembrete[];
+  total: number;
+  pagina: number;
+  tamanhoPagina: number;
+  contagem: Record<StatusLembrete, number>;
+}
