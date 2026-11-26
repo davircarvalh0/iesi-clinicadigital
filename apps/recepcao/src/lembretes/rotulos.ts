@@ -11,6 +11,7 @@ export const SELO_LEMBRETE: Record<StatusLembrete, { tom: TomSelo; texto: string
   falhou: { tom: 'perigo', texto: 'Lembrete falhou' },
   cancelado: { tom: 'neutro', texto: 'Lembrete cancelado' },
   bloqueado: { tom: 'alerta', texto: 'Lembrete bloqueado' },
+  incerto: { tom: 'alerta', texto: 'Envio sem confirmação' },
 };
 
 /** Nome curto da situação, para os filtros. */
@@ -23,11 +24,12 @@ export const NOME_SITUACAO: Record<StatusLembrete, string> = {
   falhou: 'Falharam',
   cancelado: 'Cancelados',
   bloqueado: 'Bloqueados',
+  incerto: 'Sem confirmação',
 };
 
 /** Ordem dos filtros: o que pede atenção primeiro. */
 export const ORDEM_SITUACOES: StatusLembrete[] = [
-  'falhou', 'bloqueado', 'programado', 'enviando', 'aceito_provedor', 'simulado', 'enviado', 'cancelado',
+  'falhou', 'incerto', 'bloqueado', 'programado', 'enviando', 'aceito_provedor', 'simulado', 'enviado', 'cancelado',
 ];
 
 /** Modo de envio explícito (US-12): nunca apresenta simulação como envio real. */

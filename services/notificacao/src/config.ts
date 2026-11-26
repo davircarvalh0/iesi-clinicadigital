@@ -1,3 +1,4 @@
+import { lerDestinosPermitidos } from './canais/configuracao-envio';
 import { lerConfiguracaoLembretes } from './lembretes/configuracao';
 
 function obrigatoria(nome: string): string {
@@ -21,6 +22,7 @@ export const config = {
     template: process.env.WHATSAPP_TEMPLATE ?? 'hello_world',
     idioma: process.env.WHATSAPP_TEMPLATE_LANG ?? 'en_US',
     versaoApi: process.env.WHATSAPP_API_VERSION ?? 'v21.0',
+    destinosPermitidos: lerDestinosPermitidos(process.env.WHATSAPP_DESTINOS_PERMITIDOS),
   },
   /** Rotas /operacao (inspeção e reprocessamento da fila de erros): só no ambiente de demonstração. */
   operacaoHabilitada: process.env.OPERACAO_HABILITADA === 'true',

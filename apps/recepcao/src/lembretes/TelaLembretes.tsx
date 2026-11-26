@@ -7,7 +7,7 @@ import { dataHora, horaComSegundos, rotuloDia, hora } from '../formatacao';
 import { useAgora } from '../hooks/useAgora';
 import { usePolling } from '../hooks/usePolling';
 import { situacaoDe, type Leitura } from '../sincronizacao';
-import type { ItemPainelLembrete, PaginaLembretes } from '../tipos';
+import type { ConfiguracaoEnvio, ItemPainelLembrete, PaginaLembretes } from '../tipos';
 import {
   alternarSituacao, consultaDoFiltro, NOME_PERIODO, totalDePaginas,
   type FiltroLembretes, type Periodo,
@@ -29,6 +29,7 @@ export function TelaLembretes() {
     INTERVALO_MS,
   );
   const { recarregar } = leitura;
+  const envio = usePolling(notificacaoApi.configuracaoEnvio, 30_000);
   useEffect(() => { void recarregar(); }, [consulta, recarregar]);
   const agora = useAgora();
 
@@ -39,6 +40,7 @@ export function TelaLembretes() {
       consulta={consulta}
       agora={agora}
       aoMudarFiltro={setFiltro}
+      envio={envio.dados}
       aoAtualizar={() => void recarregar()}
     />
   );
@@ -51,10 +53,12 @@ interface PropsPainel {
   agora: number;
   aoMudarFiltro: (filtro: FiltroLembretes) => void;
   aoAtualizar: () => void;
+  /** Modo de envio da Notificação (US-15); ausente enquanto não carregou. */
+  envio?: ConfiguracaoEnvio;
 }
 
 /** Parte visual, sem efeitos: renderizada nos testes com estados controlados. */
-export function PainelLembretes({ filtro, leitura, consulta, agora, aoMudarFiltro, aoAtualizar }: PropsPainel) {
+export function PainelLembretes({ filtro, leitura, consulta, agora, aoMudarFiltro, aoAtualizar, envio }: PropsPainel) {
   const situacao = situacaoDe(leitura, agora, LIMITE_ATRASO_MS);
   // Só exibe dados do filtro atual; dados de outro filtro contam como "carregando".
   const dados = leitura.dados?.consulta === consulta ? leitura.dados.pagina : undefined;
@@ -67,6 +71,7 @@ export function PainelLembretes({ filtro, leitura, consulta, agora, aoMudarFiltr
         <button type="button" className="acao" onClick={aoAtualizar}><RefreshCw size={15} aria-hidden="true" /> Atualizar</button>
       </div>
 
+      {envio && <ModoEnvio envio={envio} />}
       <div className="lembretes__filtros">
         <div className="lembretes__grupo" role="group" aria-label="Período da consulta">
           {(Object.keys(NOME_PERIODO) as Periodo[]).map((periodo) => (
@@ -113,7 +118,7 @@ export function PainelLembretes({ filtro, leitura, consulta, agora, aoMudarFiltr
         {dados.itens.length === 0
           ? <p className="lista__vazia">{filtro.situacoes.length || filtro.periodo !== 'todos'
             ? 'Nenhum lembrete com estes filtros.' : 'Nenhum lembrete registrado. Os agendamentos geram lembretes automaticamente.'}</p>
-          : <ul className="lembretes__lista">{dados.itens.map((l) => <ItemLembrete key={l.id} lembrete={l} />)}</ul>}
+          : <ul className="lembretes__lista">{dados.itens.map((l) => <ItemLembrete key={l.id} lembrete={l} aoAlterar={aoAtualizar} />)}</ul>}
         {paginas > 1 && (
           <nav className="pacientes__paginacao" aria-label="Paginação de lembretes">
             <button className="botao botao--secundario" disabled={filtro.pagina <= 1}
@@ -128,7 +133,9 @@ export function PainelLembretes({ filtro, leitura, consulta, agora, aoMudarFiltr
   );
 }
 
-export function ItemLembrete({ lembrete: l, trilhaAberta = false }: { lembrete: ItemPainelLembrete; trilhaAberta?: boolean }) {
+export function ItemLembrete({ lembrete: l, trilhaAberta = false, aoAlterar }: {
+  lembrete: ItemPainelLembrete; trilhaAberta?: boolean; aoAlterar?: () => void;
+}) {
   const selo = SELO_LEMBRETE[l.status];
   const concluido = l.enviadoEm !== null;
   const [aberta, setAberta] = useState(trilhaAberta);
@@ -165,7 +172,19 @@ export function ItemLembrete({ lembrete: l, trilhaAberta = false }: { lembrete: 
           </button>
         </div>
       </div>
-      {aberta && <div id={idTrilha}><TrilhaLembrete idConsulta={l.idConsulta} /></div>}
+      {aberta && <div id={idTrilha}><TrilhaLembrete idConsulta={l.idConsulta} aoAlterar={aoAlterar} /></div>}
     </li>
+  );
+}
+
+/** US-15: o modo de envio fica explícito; simulação nunca aparece como envio real. */
+export function ModoEnvio({ envio }: { envio: ConfiguracaoEnvio }) {
+  const real = envio.modo === 'real';
+  return (
+    <div className={`lembretes__modo lembretes__modo--${envio.modo}`} role="note" aria-label="Modo de envio">
+      <Selo tom={real ? 'sucesso' : 'neutro'}>{real ? 'Envio real · WhatsApp' : 'Envio simulado · log'}</Selo>
+      <span>{envio.motivo}</span>
+      {envio.modoAntecedencia === 'demonstracao' && <Selo tom="alerta">Demonstração · antecedência de {envio.antecedenciaMinutos} min</Selo>}
+    </div>
   );
 }

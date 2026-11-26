@@ -2,19 +2,32 @@ import type { Lembrete, Prisma } from '../../generated/prisma';
 import { registrarAtividade, type DadosAtividade } from '../atividades/registro';
 import { verificarAutorizacao } from '../autorizacoes/servico';
 import type { CanalEnvio } from '../canais';
-import { FalhaEnvio } from '../canais/canal-envio';
+import { EnvioIncerto, FalhaEnvio } from '../canais/canal-envio';
 import { paraFormatoInternacional } from '../canais/telefone';
 import { prisma } from '../db';
 import { MOTIVO_CONSULTA_INICIADA } from '../lembretes/horario';
 
+export const MOTIVO_INTERROMPIDO =
+  'Envio interrompido sem confirmação do WhatsApp (o serviço parou durante a chamada): a mensagem pode ter sido enviada';
+
+export interface OpcoesRotina {
+  /** US-15: reserva 'enviando' mais antiga que isso é de uma chamada interrompida. Padrão 60 s. */
+  reservaExpiraMs?: number;
+}
+
 /** Rotina periódica que envia os lembretes cujo horário chegou. Retorna uma função que a para. */
-export function iniciarRotinaEnvio(canal: CanalEnvio, intervaloMs: number, maxTentativas: number): () => void {
+export function iniciarRotinaEnvio(
+  canal: CanalEnvio, intervaloMs: number, maxTentativas: number, opcoes: OpcoesRotina = {},
+): () => void {
+  const reservaExpiraMs = opcoes.reservaExpiraMs ?? 60_000;
   let rodando = false;
 
   const ciclo = async () => {
     if (rodando) return;
     rodando = true;
     try {
+      // Roda antes dos envios e no mesmo laço: nunca encontra uma chamada viva deste processo.
+      await recuperarReservasExpiradas(reservaExpiraMs);
       await enviarVencidos(canal, maxTentativas);
     } catch (erro) {
       console.error('[rotina-envio] falha no ciclo', codigoErro(erro));
@@ -26,6 +39,60 @@ export function iniciarRotinaEnvio(canal: CanalEnvio, intervaloMs: number, maxTe
   const timer = setInterval(ciclo, intervaloMs);
   console.log(`[rotina-envio] canal "${canal.nome}", a cada ${intervaloMs}ms`);
   return () => clearInterval(timer);
+}
+
+/**
+ * US-15: reservas 'enviando' que passaram do prazo pertencem a chamadas interrompidas (queda ou
+ * reinício do processo). No envio real o desfecho é desconhecido: o lembrete vira 'incerto' e não é
+ * repetido sozinho. No simulado nada saiu da clínica: o lembrete volta à fila.
+ */
+export async function recuperarReservasExpiradas(reservaExpiraMs: number, agora = new Date()): Promise<number> {
+  const limite = new Date(agora.getTime() - reservaExpiraMs);
+  const presos = await prisma.lembrete.findMany({
+    where: { status: 'enviando', atualizadoEm: { lt: limite } },
+    orderBy: { atualizadoEm: 'asc' },
+    take: 50,
+  });
+  let recuperados = 0;
+  for (const l of presos) {
+    const ok = await prisma.$transaction(async (tx) => {
+      const aberta = await tx.tentativaEnvio.findFirst({
+        where: { idLembrete: l.id, resultado: 'em_andamento' },
+        orderBy: { iniciadaEm: 'desc' },
+      });
+      const simulado = aberta?.modo === 'simulado';
+      // Condicionado à leitura: se outra execução mexeu no lembrete, não toca.
+      const { count } = await tx.lembrete.updateMany({
+        where: { id: l.id, status: 'enviando', atualizadoEm: l.atualizadoEm },
+        data: simulado
+          ? { status: 'programado' }
+          : {
+            status: 'incerto',
+            motivoFalha: MOTIVO_INTERROMPIDO,
+            incertoResolvidoEm: null,
+            tentativas: aberta?.numero ?? l.tentativas + 1,
+            canalEnvio: aberta?.canal ?? l.canalEnvio,
+            modoEnvio: aberta?.modo ?? l.modoEnvio,
+          },
+      });
+      if (!count) return false;
+      if (aberta) {
+        await tx.tentativaEnvio.update({
+          where: { id: aberta.id },
+          data: simulado
+            ? { resultado: 'falhou', motivo: 'Interrompida antes do desfecho; envio simulado repetido', concluidaEm: agora }
+            : { resultado: 'indeterminado', motivo: MOTIVO_INTERROMPIDO, concluidaEm: agora },
+        });
+      }
+      const base = { idConsulta: l.idConsulta, idEvento: l.idEventoConsulta ?? undefined };
+      await registrarAtividade(simulado
+        ? { ...base, acao: 'envio.retomado', descricao: 'Envio simulado interrompido; o lembrete voltou à fila' }
+        : { ...base, acao: 'lembrete.incerto', descricao: MOTIVO_INTERROMPIDO }, tx);
+      return true;
+    });
+    if (ok) recuperados++;
+  }
+  return recuperados;
 }
 
 async function enviarVencidos(canal: CanalEnvio, maxTentativas: number): Promise<void> {
@@ -135,7 +202,7 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
 
     if (tentativa.ok) {
       const resultado = tentativa.resultado;
-      await finalizarReserva({ ...resultado, enviadoEm: new Date(), tentativas, motivoFalha: null }, {
+      await finalizarReserva({ ...resultado, enviadoEm: new Date(), tentativas, motivoFalha: null, incertoResolvidoEm: null }, {
         ...base,
         acao: resultado.status === 'simulado' ? 'lembrete.simulado' : 'lembrete.aceito_provedor',
         descricao: resultado.status === 'simulado'
@@ -145,7 +212,18 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
       return;
     }
 
-    const novaTentativa = tentativas < maxTentativas;
+    // US-15: a mensagem pode ter saído. Não repete sozinho; a recepção decide (reenviar ou não).
+    if (tentativa.incerto) {
+      await finalizarReserva(
+        { status: 'incerto', canalEnvio: canal.nome, modoEnvio: modo, tentativas, motivoFalha: tentativa.motivo, incertoResolvidoEm: null },
+        { ...base, acao: 'lembrete.incerto', descricao: `Tentativa ${tentativas}: ${tentativa.motivo}` },
+        { resultado: 'indeterminado', motivo: tentativa.motivo },
+      );
+      return;
+    }
+
+    // Falha definitiva (ex.: destino fora da lista de teste) não é repetida.
+    const novaTentativa = !tentativa.definitiva && tentativas < maxTentativas;
     const registrado = await finalizarReserva(
       {
         status: novaTentativa ? 'programado' : 'falhou',
@@ -153,6 +231,7 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
         modoEnvio: modo,
         tentativas,
         motivoFalha: tentativa.motivo,
+        incertoResolvidoEm: null,
       },
       {
         ...base,
@@ -166,7 +245,12 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
   }
 }
 
-async function tentarEnvio(canal: CanalEnvio, lembrete: Lembrete) {
+type DesfechoChamada =
+  | { ok: true; resultado: Awaited<ReturnType<CanalEnvio['enviar']>> }
+  | { ok: false; incerto: true; motivo: string }
+  | { ok: false; incerto: false; motivo: string; definitiva: boolean };
+
+async function tentarEnvio(canal: CanalEnvio, lembrete: Lembrete): Promise<DesfechoChamada> {
   try {
     const resultado = await canal.enviar({
       telefone: paraFormatoInternacional(lembrete.telefone),
@@ -175,10 +259,11 @@ async function tentarEnvio(canal: CanalEnvio, lembrete: Lembrete) {
       profissional: lembrete.profissional,
       inicioConsulta: lembrete.inicioConsulta,
     });
-    return { ok: true, resultado } as const;
+    return { ok: true, resultado };
   } catch (erro) {
-    const motivo = erro instanceof FalhaEnvio ? erro.message : `Falha no canal ${canal.nome}`;
-    return { ok: false, motivo } as const;
+    if (erro instanceof EnvioIncerto) return { ok: false, incerto: true, motivo: erro.message };
+    if (erro instanceof FalhaEnvio) return { ok: false, incerto: false, motivo: erro.message, definitiva: erro.definitiva };
+    return { ok: false, incerto: false, motivo: `Falha no canal ${canal.nome}`, definitiva: false };
   }
 }
 

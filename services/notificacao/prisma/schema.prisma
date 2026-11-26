@@ -19,6 +19,8 @@ enum StatusLembrete {
   cancelado
   /// Sem autorização de contato no canal (desconhecida ou revogada) no momento do envio.
   bloqueado
+  /// US-15: a chamada ao WhatsApp pode ter chegado ao provedor, mas não houve confirmação. Não é repetida sozinha.
+  incerto
 }
 
 enum ModoEnvio {
@@ -53,7 +55,10 @@ model Lembrete {
   idExterno           String?        @map("id_externo")
   /// US-11: sequência do último evento de consulta aplicado; nulo quando só eventos sem sequência foram recebidos.
   sequenciaAplicada   Int?           @map("sequencia_aplicada")
+  /// US-15: quando a recepção decidiu manter um envio incerto sem reenvio. Volta a nulo a cada novo resultado.
+  incertoResolvidoEm  DateTime?      @map("incerto_resolvido_em") @db.Timestamptz(3)
   tentativasEnvio     TentativaEnvio[]
+  resolucoes          ResolucaoEnvio[]
   criadoEm            DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -137,6 +142,8 @@ enum ResultadoTentativa {
   simulado
   aceito_provedor
   falhou
+  /// US-15: sem resposta do provedor depois do pedido (tempo esgotado, conexão cortada ou processo reiniciado).
+  indeterminado
 }
 
 /// US-13: cada chamada ao canal de envio, em ordem. Não guarda nome, CPF nem telefone.
@@ -161,4 +168,23 @@ model TentativaEnvio {
   @@index([idConsulta, iniciadaEm])
   @@index([idLembrete])
   @@map("tentativas_envio")
+}
+
+enum AcaoResolucao {
+  reenviar
+  manter_sem_reenvio
+}
+
+/// US-15: decisão da recepção sobre um envio incerto (quem, quando, o quê). Só recebe inserções.
+model ResolucaoEnvio {
+  id           String        @id @default(uuid())
+  idLembrete   String        @map("id_lembrete")
+  lembrete     Lembrete      @relation(fields: [idLembrete], references: [id], onDelete: Cascade)
+  idConsulta   String        @map("id_consulta")
+  acao         AcaoResolucao
+  solicitante  String
+  registradaEm DateTime      @default(now()) @map("registrada_em") @db.Timestamptz(3)
+
+  @@index([idLembrete, registradaEm])
+  @@map("resolucoes_envio")
 }

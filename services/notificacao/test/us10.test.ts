@@ -29,12 +29,16 @@ test('US-10 CA2 e CA3: limites de 24 horas, consulta futura próxima e consulta 
 test('US-10 CA3: demonstração e valores de configuração inválidos', () => {
   assert.deepEqual(lerConfiguracaoLembretes({ LEMBRETE_ANTECEDENCIA_MINUTOS: '1' }), {
     modoAntecedencia: 'demonstracao', antecedenciaMinutos: 1, rotinaEnvioIntervaloMs: 5000, envioMaxTentativas: 3,
+    envioReservaExpiraMs: 60000, // US-15
   });
   for (const valor of ['', '0', '-1', '1.5', 'NaN', '1441', '1e2']) {
     assert.throws(() => lerConfiguracaoLembretes({ LEMBRETE_ANTECEDENCIA_MINUTOS: valor }), /LEMBRETE_ANTECEDENCIA_MINUTOS inválido/);
   }
   assert.throws(() => lerConfiguracaoLembretes({ ROTINA_ENVIO_INTERVALO_MS: '2147483648' }), /ROTINA_ENVIO_INTERVALO_MS inválido/);
   assert.throws(() => lerConfiguracaoLembretes({ ENVIO_MAX_TENTATIVAS: '0' }), /ENVIO_MAX_TENTATIVAS inválido/);
+  // US-15: a reserva precisa durar mais que o tempo limite da chamada ao WhatsApp (10 s).
+  assert.throws(() => lerConfiguracaoLembretes({ ENVIO_RESERVA_EXPIRA_MS: '10000' }), /ENVIO_RESERVA_EXPIRA_MS inválido/);
+  assert.equal(lerConfiguracaoLembretes({ ENVIO_RESERVA_EXPIRA_MS: '10001' }).envioReservaExpiraMs, 10001);
 });
 
 test('US-10: remarcação recalcula pela nova data e a rotina descarta pendências antigas', {

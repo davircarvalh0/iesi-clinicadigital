@@ -5,7 +5,7 @@ import type { Prisma, StatusLembrete } from '../../generated/prisma';
 import { prisma } from '../db';
 
 export const SITUACOES: readonly StatusLembrete[] = [
-  'programado', 'enviando', 'enviado', 'simulado', 'aceito_provedor', 'falhou', 'cancelado', 'bloqueado',
+  'programado', 'enviando', 'enviado', 'simulado', 'aceito_provedor', 'falhou', 'cancelado', 'bloqueado', 'incerto',
 ];
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
@@ -72,6 +72,7 @@ const camposPainel = {
   modoEnvio: true,
   canalEnvio: true,
   idExterno: true,
+  incertoResolvidoEm: true,
   atualizadoEm: true,
 } satisfies Prisma.LembreteSelect;
 

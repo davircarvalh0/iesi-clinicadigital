@@ -2,7 +2,7 @@
 
 export type StatusConsulta = 'agendada' | 'cancelada';
 export type StatusLembrete =
-  | 'programado' | 'enviando' | 'enviado' | 'simulado' | 'aceito_provedor' | 'falhou' | 'cancelado' | 'bloqueado';
+  | 'programado' | 'enviando' | 'enviado' | 'simulado' | 'aceito_provedor' | 'falhou' | 'cancelado' | 'bloqueado' | 'incerto';
 
 export interface Consulta {
   id: string;
@@ -89,6 +89,8 @@ export interface ItemPainelLembrete {
   modoEnvio: 'simulado' | 'real' | null;
   canalEnvio: 'log' | 'whatsapp' | null;
   idExterno: string | null;
+  /** US-15: quando a recepção manteve um envio incerto sem reenvio. */
+  incertoResolvidoEm: string | null;
   atualizadoEm: string;
 }
 
@@ -100,7 +102,7 @@ export interface PaginaLembretes {
   contagem: Record<StatusLembrete, number>;
 }
 
-export type ResultadoTentativa = 'em_andamento' | 'simulado' | 'aceito_provedor' | 'falhou';
+export type ResultadoTentativa = 'em_andamento' | 'simulado' | 'aceito_provedor' | 'falhou' | 'indeterminado';
 
 /** Uma chamada ao canal de envio (US-13). */
 export interface TentativaEnvio {
@@ -116,10 +118,30 @@ export interface TentativaEnvio {
   concluidaEm: string | null;
 }
 
-/** GET /lembretes/:idConsulta/trilha (US-13): sem nome, CPF ou telefone. */
+/** Decisão da recepção sobre um envio incerto (US-15). */
+export interface ResolucaoEnvio {
+  id: string;
+  acao: 'reenviar' | 'manter_sem_reenvio';
+  solicitante: string;
+  registradaEm: string;
+}
+
+/** GET /lembretes/:idConsulta/trilha (US-13): sem nome, CPF ou telefone do paciente. */
 export interface TrilhaLembrete {
   lembrete: Pick<Lembrete, 'id' | 'idConsulta' | 'status' | 'enviarEm' | 'enviadoEm' | 'tentativas' | 'motivoFalha' | 'modoEnvio' | 'canalEnvio' | 'idExterno'>
-    & { inicioConsulta: string; idEventoConsulta: string | null };
+    & { inicioConsulta: string; idEventoConsulta: string | null; incertoResolvidoEm: string | null };
   tentativas: TentativaEnvio[];
   atividades: { id: string; acao: string; descricao: string; idEvento: string | null; ocorridoEm: string }[];
+  resolucoes: ResolucaoEnvio[];
+}
+
+/** GET /envio/configuracao (US-15): modo de envio explícito, sem credenciais nem telefones. */
+export interface ConfiguracaoEnvio {
+  modo: 'real' | 'simulado';
+  canal: 'log' | 'whatsapp';
+  motivo: string;
+  destinosPermitidos: number | 'todos' | null;
+  antecedenciaMinutos: number;
+  modoAntecedencia: 'normal' | 'demonstracao';
+  maxTentativas: number;
 }
