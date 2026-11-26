@@ -1,0 +1,62 @@
+# US-21: automação da verificação (US-20) a cada push e pull request.
+# - estatica: typecheck, build, testes unitários e dos roteiros (sem Docker), em poucos minutos.
+# - completa: sobe o Compose isolado, roda as suítes de banco e de integração e guarda relatório e logs.
+name: Verificação
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: verificacao-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  estatica:
+    name: Estática (typecheck, build, unitários)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run verificar -- --rapido --sem-relatorio
+
+  completa:
+    name: Completa (Compose isolado, banco e integração)
+    needs: estatica
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Verificação completa
+        run: npm run verificar -- --manter
+      - name: Logs dos serviços
+        if: always()
+        run: docker compose -p iesi-clinicadigital-verificacao --env-file .env.example logs --no-color > servicos.log 2>&1 || true
+      - name: Relatório e logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verificacao-${{ github.run_number }}
+          path: |
+            docs/evidencias/verificacao.md
+            servicos.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Limpeza
+        if: always()
+        run: docker compose -p iesi-clinicadigital-verificacao --env-file .env.example down -v --remove-orphans
