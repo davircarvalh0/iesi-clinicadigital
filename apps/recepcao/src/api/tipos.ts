@@ -18,6 +18,22 @@ export interface Profissional {
   id: string;
   nome: string;
   especialidade: string;
+  ativo: boolean;
+  duracaoConsultaMinutos: number;
+}
+
+export interface IntervaloDisponibilidade {
+  /** 0 = domingo … 6 = sábado. */
+  diaSemana: number;
+  /** HH:MM, horário da clínica (America/Recife). */
+  inicio: string;
+  fim: string;
+}
+
+export interface Disponibilidade {
+  profissionalId: string;
+  duracaoConsultaMinutos: number;
+  intervalos: IntervaloDisponibilidade[];
 }
 
 // ---------- Agendamento ----------

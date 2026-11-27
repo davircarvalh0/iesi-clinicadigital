@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dataHora } from '../../../apps/recepcao/src/formatacao';
+import { dataHora } from '../../../apps/recepcao/src/dominio/datas';
 import { lerConfiguracaoLembretes } from '../src/lembretes/configuracao';
 import { calcularEnvio, MOTIVO_CONSULTA_INICIADA } from '../src/lembretes/horario';
 

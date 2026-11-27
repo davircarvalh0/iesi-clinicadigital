@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test';
 import { setTimeout as esperar } from 'node:timers/promises';
 import { promisify } from 'node:util';
 // A mesma regra que a tela usa para mostrar "Sincronização pendente" (Node remove os tipos ao importar).
-import { pendenciaDoLembrete } from '../apps/recepcao/src/sincronizacao.ts';
+import { pendenciaDe as pendenciaDoLembrete } from '../apps/recepcao/src/dominio/lembretes.ts';
 
 // Requer o Compose no ar. Pausa o consumo da Notificação e para o container dela por alguns segundos.
 const base = process.env.TEST_BASE_URL ?? 'http://localhost:8080';

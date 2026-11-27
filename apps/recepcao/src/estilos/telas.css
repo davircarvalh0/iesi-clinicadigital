@@ -266,6 +266,13 @@
 .saude__item { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 4px 0 4px 14px; border-left: 2px solid var(--linha); }
 .saude__item > div { display: flex; flex-direction: column; }
 
+/* ---------- Disponibilidade ---------- */
+.disponibilidade__dia { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-bottom: 1px solid var(--linha-suave); }
+.disponibilidade__titulo { font-size: var(--t1); font-weight: 600; }
+.disponibilidade__intervalo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.disponibilidade__intervalo input[type="time"] { padding: 8px 10px; border: 1px solid var(--linha); border-radius: var(--raio); font: inherit; }
+.disponibilidade__intervalo input[type="time"]:focus { outline: none; border-color: var(--marca); box-shadow: var(--foco); }
+
 /* ---------- Telas menores ---------- */
 @media (max-width: 1280px) {
   .estrutura--com-painel { grid-template-columns: 248px minmax(0, 1fr); }
