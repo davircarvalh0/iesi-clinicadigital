@@ -52,9 +52,12 @@ test('US-15 CA3: só um envio sem confirmação aceita decisão; entrada inváli
   const id = criada.dados.id;
   await aguardar(async () => (await api(`notificacao/lembretes?consulta=${id}`)).dados, (l) => l?.[0]?.status === 'programado', 'lembrete programado');
 
+  const invalida = await api(`notificacao/lembretes/${id}/resolucao`, { method: 'POST', body: { acao: 'invalida' } });
+  assert.equal(invalida.status, 400);
+  // O solicitante vem da sessão. A ausência do nome não é erro de validação.
   const semNome = await api(`notificacao/lembretes/${id}/resolucao`, { method: 'POST', body: { acao: 'reenviar' } });
-  assert.equal(semNome.status, 400);
-  assert.match(semNome.dados.erro, /Informe quem está decidindo/);
+  assert.equal(semNome.status, 409);
+  assert.match(semNome.dados.erro, /Só um envio sem confirmação pode ser resolvido/);
   const programado = await api(`notificacao/lembretes/${id}/resolucao`, { method: 'POST', body: { acao: 'reenviar', solicitante: 'Juliana' } });
   assert.equal(programado.status, 409);
   assert.match(programado.dados.erro, /Só um envio sem confirmação pode ser resolvido/);

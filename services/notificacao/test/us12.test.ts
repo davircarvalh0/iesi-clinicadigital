@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { verificarAcesso } from '@clinica/eventos';
-import { fetch } from '../../../packages/eventos/test/http-autenticado';
+import { tokenTeste } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import { test } from 'node:test';
@@ -72,7 +72,9 @@ test('US-12: resultados persistidos e expostos pelo GET /lembretes', {
       });
       const canal = criarCanalEnvio({ canalEnvio: cenario.canalEnvio, whatsapp: { ...whatsapp, token: cenario.token } });
       const consultar = async () => {
-        const resposta = await consultarHttp(`http://127.0.0.1:${porta}/lembretes?consulta=${id}`);
+        const resposta = await consultarHttp(`http://127.0.0.1:${porta}/lembretes?consulta=${id}`, {
+          headers: { Authorization: `Bearer ${tokenTeste()}` },
+        });
         assert.equal(resposta.status, 200);
         const [lembrete] = await resposta.json();
         return lembrete;

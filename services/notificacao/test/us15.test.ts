@@ -228,7 +228,9 @@ describe('US-15 com banco', { skip: !process.env.TEST_DATABASE_URL }, () => {
     assert.equal(r.status, 201);
     assert.equal(r.corpo.lembrete.status, 'incerto', 'continua sem confirmação: não vira sucesso nem falha');
     assert.ok(r.corpo.lembrete.incertoResolvidoEm);
-    assert.match(r.corpo.lembrete.motivoFalha, /Mantido sem reenvio por Juliana/);
+    // A identidade é determinada pela sessão autenticada, não pelo corpo enviado.
+    assert.match(r.corpo.lembrete.motivoFalha, /Mantido sem reenvio por Administrador/);
+    assert.doesNotMatch(r.corpo.lembrete.motivoFalha, /Juliana/);
     assert.equal((await resolver(id, { acao: 'reenviar', solicitante: 'Juliana' })).status, 409);
   });
 

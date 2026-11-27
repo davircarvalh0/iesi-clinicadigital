@@ -44,7 +44,9 @@ test('US-07: mestre real, busca, edição, concorrência, eventos e idempotênci
         inicio: new Date(Date.now() + 7 * 86400000).toISOString() };
       consulta = await api('agendamento/consultas', dados);
       assert.equal(consulta.status, 201);
-      assert.equal((await api('agendamento/consultas', { ...dados, profissional: profissionalDeTeste() })).status, 201);
+      // Duas consultas para o mesmo paciente, sem sobrepor horários.
+      const segunda = { ...dados, profissional: profissionalDeTeste(), inicio: new Date(Date.parse(dados.inicio) + 3600000).toISOString() };
+      assert.equal((await api('agendamento/consultas', segunda)).status, 201);
       const resultado = await aguardar(lista, (d) => d.totalFiltrado === 1, 'criação do mestre');
       paciente = resultado.pacientes[0];
       assert.equal(resultado.pacientes.length, 1);
