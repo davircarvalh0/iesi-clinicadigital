@@ -151,6 +151,8 @@
 .lista-simples li:last-child { border-bottom: 0; }
 .lista-simples li span { color: var(--tinta-suave); }
 .lista-simples li .selo { margin-left: auto; }
+.lista-simples__acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.lista-simples li .lista-simples__acoes .selo { margin-left: 0; }
 
 .monograma {
   width: 40px; height: 40px; border-radius: 50%; flex: none;

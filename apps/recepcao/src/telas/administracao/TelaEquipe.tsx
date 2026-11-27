@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Clock, Pencil } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { motivo, statusDe } from '../../api/cliente';
 import { agendamento, cadastro } from '../../api/servicos';
-import type { Perfil } from '../../api/tipos';
-import { Aviso, CabecalhoTela, Campo, Carregando, Selo } from '../../ui/componentes';
+import type { Perfil, Profissional } from '../../api/tipos';
+import { Aviso, CabecalhoTela, Campo, Carregando, Confirmacao, Selo, Sobreposicao } from '../../ui/componentes';
+import { GavetaDisponibilidade } from './GavetaDisponibilidade';
 
 const NOME_PERFIL: Record<Perfil, string> = { administrador: 'Administração', recepcionista: 'Recepção', profissional: 'Profissional', paciente: 'Paciente' };
 
@@ -25,12 +27,22 @@ function Profissionais() {
   const [nome, setNome] = useState('');
   const [especialidade, setEspecialidade] = useState('');
   const [aviso, setAviso] = useState<{ tom: 'ok' | 'perigo'; texto: string } | null>(null);
+  const [editando, setEditando] = useState<Profissional | null>(null);
+  const [configurando, setConfigurando] = useState<Profissional | null>(null);
+  const [desativando, setDesativando] = useState<Profissional | null>(null);
+
   const cadastrar = useMutation({
     mutationFn: () => agendamento.cadastrarProfissional({ nome: nome.trim(), especialidade: especialidade.trim() }),
     onSuccess: (p) => { setAviso({ tom: 'ok', texto: `${p.nome} cadastrado.` }); setNome(''); setEspecialidade(''); void cliente.invalidateQueries({ queryKey: ['profissionais'] }); },
     onError: (e) => setAviso({ tom: 'perigo', texto: statusDe(e) === 409 ? 'Já existe um profissional com esse nome.' : `Não foi possível cadastrar: ${motivo(e)}.` }),
   });
   const enviar = (e: FormEvent) => { e.preventDefault(); setAviso(null); cadastrar.mutate(); };
+
+  const definirStatus = useMutation({
+    mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => agendamento.definirStatusProfissional(id, ativo),
+    onSuccess: () => { setDesativando(null); void cliente.invalidateQueries({ queryKey: ['profissionais'] }); },
+    onError: (e) => setAviso({ tom: 'perigo', texto: `Não foi possível alterar: ${motivo(e)}.` }),
+  });
 
   return (
     <section className="bloco" aria-labelledby="titulo-profissionais">
@@ -39,7 +51,25 @@ function Profissionais() {
       {lista.isError && <Aviso tom="perigo">Não foi possível carregar: {motivo(lista.error)}.</Aviso>}
       {lista.data?.length === 0 && <p className="nota">Nenhum profissional ainda. Sem eles não dá para agendar consultas.</p>}
       <ul className="lista-simples">
-        {lista.data?.map((p) => <li key={p.id}><strong>{p.nome}</strong><span>{p.especialidade}</span></li>)}
+        {lista.data?.map((p) => (
+          <li key={p.id}>
+            <strong>{p.nome}</strong>
+            <span>{p.especialidade}</span>
+            <div className="lista-simples__acoes">
+              {!p.ativo && <Selo tom="perigo">Inativo</Selo>}
+              <button type="button" className="botao botao--quieto botao--icone" onClick={() => setEditando(p)} aria-label={`Editar ${p.nome}`}>
+                <Pencil size={15} aria-hidden="true" />
+              </button>
+              <button type="button" className="botao botao--quieto botao--icone" onClick={() => setConfigurando(p)} aria-label={`Horários de ${p.nome}`}>
+                <Clock size={15} aria-hidden="true" />
+              </button>
+              <button type="button" className="botao botao--quieto" disabled={definirStatus.isPending}
+                onClick={() => (p.ativo ? setDesativando(p) : definirStatus.mutate({ id: p.id, ativo: true }))}>
+                {p.ativo ? 'Desativar' : 'Ativar'}
+              </button>
+            </div>
+          </li>
+        ))}
       </ul>
       <form className="formulario formulario--separado" onSubmit={enviar}>
         <h3 className="formulario__titulo">Cadastrar profissional</h3>
@@ -50,7 +80,62 @@ function Profissionais() {
         {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
         <div className="formulario__acoes"><button className="botao botao--primario" disabled={cadastrar.isPending}>{cadastrar.isPending ? 'Cadastrando…' : 'Cadastrar profissional'}</button></div>
       </form>
+
+      {editando && (
+        <DialogoEditarProfissional
+          profissional={editando}
+          aoFechar={() => setEditando(null)}
+          aoSalvo={() => { setEditando(null); void cliente.invalidateQueries({ queryKey: ['profissionais'] }); }}
+        />
+      )}
+      {configurando && <GavetaDisponibilidade profissional={configurando} aoFechar={() => setConfigurando(null)} />}
+      {desativando && (
+        <Confirmacao
+          titulo={`Desativar ${desativando.nome}?`}
+          confirmar="Desativar"
+          perigo
+          ocupado={definirStatus.isPending}
+          aoFechar={() => setDesativando(null)}
+          aoConfirmar={() => definirStatus.mutate({ id: desativando.id, ativo: false })}
+        >
+          <p>Profissional inativo não recebe novas consultas. As consultas já marcadas continuam normalmente.</p>
+        </Confirmacao>
+      )}
     </section>
+  );
+}
+
+function DialogoEditarProfissional({ profissional, aoFechar, aoSalvo }: { profissional: Profissional; aoFechar: () => void; aoSalvo: () => void }) {
+  const [nome, setNome] = useState(profissional.nome);
+  const [especialidade, setEspecialidade] = useState(profissional.especialidade);
+  const [duracao, setDuracao] = useState(profissional.duracaoConsultaMinutos);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const salvar = useMutation({
+    mutationFn: () => agendamento.atualizarProfissional(profissional.id, {
+      nome: nome.trim(), especialidade: especialidade.trim(), duracaoConsultaMinutos: duracao,
+    }),
+    onSuccess: aoSalvo,
+    onError: (e) => setErro(statusDe(e) === 409 ? 'Já existe um profissional com esse nome.' : `Não foi possível salvar: ${motivo(e)}.`),
+  });
+
+  const enviar = (e: FormEvent) => { e.preventDefault(); if (salvar.isPending) return; setErro(null); salvar.mutate(); };
+
+  return (
+    <Sobreposicao titulo={`Editar ${profissional.nome}`} largura="estreita" aoFechar={aoFechar}
+      rodape={<>
+        <button type="button" className="botao botao--quieto" onClick={aoFechar}>Voltar</button>
+        <button type="submit" form="editar-profissional" className="botao botao--primario" disabled={salvar.isPending}>{salvar.isPending ? 'Salvando…' : 'Salvar'}</button>
+      </>}>
+      <form id="editar-profissional" className="formulario" onSubmit={enviar}>
+        <Campo rotulo="Nome"><input required minLength={3} maxLength={120} value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+        <Campo rotulo="Especialidade"><input required minLength={2} maxLength={120} value={especialidade} onChange={(e) => setEspecialidade(e.target.value)} /></Campo>
+        <Campo rotulo="Duração de cada consulta (minutos)" dica="De 5 a 240 minutos.">
+          <input type="number" required min={5} max={240} value={duracao} onChange={(e) => setDuracao(Number(e.target.value))} />
+        </Campo>
+        {erro && <Aviso tom="perigo">{erro}</Aviso>}
+      </form>
+    </Sobreposicao>
   );
 }
 

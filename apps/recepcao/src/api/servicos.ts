@@ -1,8 +1,8 @@
 import { chamar } from './cliente';
 import type {
-  Atividade, Autorizacao, Canal, ConfiguracaoEnvio, Consulta, DadosNovaConsulta, EdicaoPaciente, ErroNaFila,
-  EstadoConsumo, EventoPublicado, Lembrete, OrigemAutorizacao, PacienteDetalhado, PaginaLembretes, PaginaPacientes,
-  Perfil, Profissional, Reprocessamento, Trilha, Usuario, UsuarioListado,
+  Atividade, Autorizacao, Canal, ConfiguracaoEnvio, Consulta, DadosNovaConsulta, Disponibilidade, EdicaoPaciente,
+  ErroNaFila, EstadoConsumo, EventoPublicado, IntervaloDisponibilidade, Lembrete, OrigemAutorizacao, PacienteDetalhado,
+  PaginaLembretes, PaginaPacientes, Perfil, Profissional, Reprocessamento, Trilha, Usuario, UsuarioListado,
 } from './tipos';
 
 const id = encodeURIComponent;
@@ -22,6 +22,14 @@ export const agendamento = {
   profissionais: (sinal?: AbortSignal) => chamar<Profissional[]>('/api/agendamento/profissionais', { sinal }),
   cadastrarProfissional: (dados: { nome: string; especialidade: string }) =>
     chamar<Profissional>('/api/agendamento/profissionais', { metodo: 'POST', corpo: dados }),
+  atualizarProfissional: (idProfissional: string, dados: { nome?: string; especialidade?: string; duracaoConsultaMinutos?: number }) =>
+    chamar<Profissional>(`/api/agendamento/profissionais/${id(idProfissional)}`, { metodo: 'PATCH', corpo: dados }),
+  definirStatusProfissional: (idProfissional: string, ativo: boolean) =>
+    chamar<Profissional>(`/api/agendamento/profissionais/${id(idProfissional)}/status`, { metodo: 'PATCH', corpo: { ativo } }),
+  disponibilidade: (idProfissional: string, sinal?: AbortSignal) =>
+    chamar<Disponibilidade>(`/api/agendamento/profissionais/${id(idProfissional)}/disponibilidade`, { sinal }),
+  definirDisponibilidade: (idProfissional: string, intervalos: IntervaloDisponibilidade[]) =>
+    chamar<Disponibilidade>(`/api/agendamento/profissionais/${id(idProfissional)}/disponibilidade`, { metodo: 'PUT', corpo: { intervalos }, prazoMs: 10_000 }),
   eventos: (sinal?: AbortSignal) => chamar<EventoPublicado[]>('/api/agendamento/eventos?limite=40', { sinal }),
   reenviarUltimoEvento: () => chamar<unknown>('/api/agendamento/demo/reenviar-ultimo-evento', { metodo: 'POST' }),
 };
