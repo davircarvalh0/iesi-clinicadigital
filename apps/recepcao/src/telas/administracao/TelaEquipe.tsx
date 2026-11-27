@@ -30,6 +30,7 @@ function Profissionais() {
   const [editando, setEditando] = useState<Profissional | null>(null);
   const [configurando, setConfigurando] = useState<Profissional | null>(null);
   const [desativando, setDesativando] = useState<Profissional | null>(null);
+  const [erroDesativar, setErroDesativar] = useState<string | null>(null);
 
   const cadastrar = useMutation({
     mutationFn: () => agendamento.cadastrarProfissional({ nome: nome.trim(), especialidade: especialidade.trim() }),
@@ -40,8 +41,12 @@ function Profissionais() {
 
   const definirStatus = useMutation({
     mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => agendamento.definirStatusProfissional(id, ativo),
-    onSuccess: () => { setDesativando(null); void cliente.invalidateQueries({ queryKey: ['profissionais'] }); },
-    onError: (e) => setAviso({ tom: 'perigo', texto: `Não foi possível alterar: ${motivo(e)}.` }),
+    onSuccess: () => { setDesativando(null); setErroDesativar(null); void cliente.invalidateQueries({ queryKey: ['profissionais'] }); },
+    onError: (e) => {
+      const texto = `Não foi possível alterar: ${motivo(e)}.`;
+      // Ativar não tem diálogo (ação direta); desativar mostra o erro dentro do diálogo aberto.
+      if (desativando) setErroDesativar(texto); else setAviso({ tom: 'perigo', texto });
+    },
   });
 
   return (
@@ -95,7 +100,8 @@ function Profissionais() {
           confirmar="Desativar"
           perigo
           ocupado={definirStatus.isPending}
-          aoFechar={() => setDesativando(null)}
+          erro={erroDesativar}
+          aoFechar={() => { setDesativando(null); setErroDesativar(null); }}
           aoConfirmar={() => definirStatus.mutate({ id: desativando.id, ativo: false })}
         >
           <p>Profissional inativo não recebe novas consultas. As consultas já marcadas continuam normalmente.</p>

@@ -58,27 +58,36 @@ function Formulario({ profissional, inicial, aoFechar }: { profissional: Profiss
         </button>
       </>}>
       <form id="disponibilidade" className="formulario" onSubmit={enviar}>
-        {DIAS_SEMANA.map((nomeDia, dia) => (
+        {DIAS_SEMANA.map((nomeDia, dia) => {
+          const doDia = intervalos.filter((it) => it.diaSemana === dia).length;
+          return (
           <div key={dia} className="disponibilidade__dia">
             <h3 className="disponibilidade__titulo">{nomeDia}</h3>
-            {intervalos.map((it, indice) => it.diaSemana === dia && (
-              <div key={indice} className="disponibilidade__intervalo">
-                <input type="time" step={300} value={it.inicio} aria-label={`Início, ${nomeDia}`}
-                  onChange={(e) => atualizar(indice, 'inicio', e.target.value)} required />
-                <span>às</span>
-                <input type="time" step={300} value={it.fim} aria-label={`Fim, ${nomeDia}`}
-                  onChange={(e) => atualizar(indice, 'fim', e.target.value)} required />
-                {it.inicio >= it.fim && <span className="campo__erro">O início deve ser antes do fim.</span>}
-                <button type="button" className="botao botao--quieto botao--icone" onClick={() => remover(indice)} aria-label={`Remover horário, ${nomeDia}`}>
-                  <Trash2 size={16} aria-hidden="true" />
-                </button>
-              </div>
-            ))}
+            {intervalos.map((it, indice) => {
+              if (it.diaSemana !== dia) return null;
+              // Mais de um horário no dia: distingue "Início, Segunda-feira 1" de "...2" pro leitor de tela.
+              const posicao = intervalos.slice(0, indice).filter((x) => x.diaSemana === dia).length + 1;
+              const rotuloDia = doDia > 1 ? `${nomeDia} ${posicao}` : nomeDia;
+              return (
+                <div key={indice} className="disponibilidade__intervalo">
+                  <input type="time" step={300} value={it.inicio} aria-label={`Início, ${rotuloDia}`}
+                    onChange={(e) => atualizar(indice, 'inicio', e.target.value)} required />
+                  <span>às</span>
+                  <input type="time" step={300} value={it.fim} aria-label={`Fim, ${rotuloDia}`}
+                    onChange={(e) => atualizar(indice, 'fim', e.target.value)} required />
+                  {it.inicio >= it.fim && <span className="campo__erro">O início deve ser antes do fim.</span>}
+                  <button type="button" className="botao botao--quieto botao--icone" onClick={() => remover(indice)} aria-label={`Remover horário, ${rotuloDia}`}>
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              );
+            })}
             <button type="button" className="botao botao--quieto" onClick={() => adicionar(dia)}>
               <Plus size={14} aria-hidden="true" /> Adicionar horário
             </button>
           </div>
-        ))}
+          );
+        })}
         <p className="nota">Dia sem nenhum horário fica sem vagas livres. Salvar substitui a semana inteira.</p>
         {erro && <Aviso tom="perigo">{erro}</Aviso>}
       </form>
