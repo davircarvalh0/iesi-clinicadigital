@@ -8,7 +8,7 @@ function obrigatoria(nome: string): string {
   return valor;
 }
 
-/** Canal de contato dos lembretes: o envio real e o simulado usam WhatsApp. */
+/** Canal cuja autorização é exigida, inclusive durante a simulação. */
 export const CANAL_LEMBRETE = process.env.CANAL_ENVIO === 'email' ? 'email' as const : 'whatsapp' as const;
 
 export const config = {

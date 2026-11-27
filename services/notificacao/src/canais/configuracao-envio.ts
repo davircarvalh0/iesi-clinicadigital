@@ -39,7 +39,7 @@ export interface DescricaoEnvio {
 export function descreverEnvio({ canalEnvio, whatsapp, email }: EntradaConfiguracaoEnvio): DescricaoEnvio {
   if (canalEnvio === 'email') {
     if (!email?.token.trim() || !email.remetente.trim()) {
-      return { modo: 'simulado', canal: 'log', canalContato: 'email', motivo: 'E-mail sem credenciais: envio simulado em log.', destinosPermitidos: null };
+      return { modo: 'simulado', canal: 'email', canalContato: 'email', motivo: 'E-mail sem credenciais: envio simulado em log.', destinosPermitidos: null };
     }
     const destinos = email.destinosPermitidos === 'todos' ? 'todos' : email.destinosPermitidos.size;
     return { modo: 'real', canal: 'email', canalContato: 'email', motivo: 'Envio por e-mail via Resend, restrito aos destinos configurados.', destinosPermitidos: destinos };
