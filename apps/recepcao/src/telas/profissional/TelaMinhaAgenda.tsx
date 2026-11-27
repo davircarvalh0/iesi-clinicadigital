@@ -1,16 +1,22 @@
+import { Check, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLeitura } from '../../app/leitura';
 import { useUsuario } from '../../app/sessao';
 import { agendamento } from '../../api/servicos';
 import type { Consulta } from '../../api/tipos';
-import { chaveDia, diaPorExtenso, hoje, hora, nomeDoDia, saudacao } from '../../dominio/datas';
-import { Atualizacao, Aviso, CabecalhoTela, Carregando, Selo, Vazio } from '../../ui/componentes';
+import { chaveDia, dataHora, diaPorExtenso, hoje, hora, nomeDoDia, saudacao } from '../../dominio/datas';
+import { Atualizacao, Aviso, CabecalhoTela, Carregando, Confirmacao, Selo, Vazio } from '../../ui/componentes';
+import { consultaAtiva, useMudancasSituacao, type EstadoSituacao, type NovaSituacao } from '../agenda/situacao';
 
-/** Agenda do profissional: só leitura, só as consultas dele (o Agendamento filtra pelo perfil). */
+/** Agenda do profissional: só as consultas dele (o Agendamento filtra pelo perfil). Registra presença/falta. */
 export function TelaMinhaAgenda() {
   const usuario = useUsuario();
+  const cliente = useQueryClient();
   const consultas = useLeitura(['minhas-consultas'], agendamento.consultas, { intervaloMs: 15_000 });
+  const situacoes = useMudancasSituacao(consultas.data, consultas.dataUpdatedAt);
   const [mostrarCanceladas, setMostrarCanceladas] = useState(false);
+  const atualizar = () => cliente.invalidateQueries({ queryKey: ['minhas-consultas'] });
 
   const dias = useMemo(() => {
     const mapa = new Map<string, Consulta[]>();
@@ -38,8 +44,8 @@ export function TelaMinhaAgenda() {
       {consultas.data && (
         <>
           <p className="resumo-lista">
-            {hojeLista.filter((c) => c.status === 'agendada').length
-              ? `Hoje você tem ${hojeLista.filter((c) => c.status === 'agendada').length} consulta(s).`
+            {hojeLista.filter(consultaAtiva).length
+              ? `Hoje você tem ${hojeLista.filter(consultaAtiva).length} consulta(s).`
               : 'Nenhuma consulta hoje.'}
             {' '}
             <label className="alternador"><input type="checkbox" checked={mostrarCanceladas} onChange={(e) => setMostrarCanceladas(e.target.checked)} /> Mostrar canceladas</label>
@@ -50,16 +56,7 @@ export function TelaMinhaAgenda() {
               <h2 className="dia-profissional__titulo">{nomeDoDia(dia)}</h2>
               <ol className="horarios horarios--simples">
                 {lista.map((c) => (
-                  <li key={c.id} className={`horario ${c.status === 'cancelada' ? 'horario--cancelado' : ''}`}>
-                    <time className="horario__hora" dateTime={c.inicio}>{hora(c.inicio)}</time>
-                    <article className="consulta">
-                      <div className="consulta__principal">
-                        <h3 className="consulta__paciente">{c.pacienteNome}</h3>
-                        <p className="consulta__detalhes">{c.especialidade}</p>
-                        {c.status === 'cancelada' && <div className="consulta__selos"><Selo tom="perigo">Cancelada</Selo></div>}
-                      </div>
-                    </article>
-                  </li>
+                  <ConsultaProfissional key={c.id} consulta={c} situacao={situacoes.estado(c)} aoMudarSituacao={(nova) => situacoes.mudar(c, nova, atualizar)} />
                 ))}
               </ol>
             </section>
@@ -67,5 +64,74 @@ export function TelaMinhaAgenda() {
         </>
       )}
     </div>
+  );
+}
+
+function ConsultaProfissional({ consulta: c, situacao, aoMudarSituacao }: {
+  consulta: Consulta;
+  situacao?: EstadoSituacao;
+  aoMudarSituacao: (nova: NovaSituacao) => void;
+}) {
+  const [confirmando, setConfirmando] = useState<'concluida' | 'falta' | null>(null);
+  const jaComecou = new Date(c.inicio) <= new Date();
+  const travado = situacao?.fase === 'enviando' || situacao?.fase === 'incerto';
+
+  return (
+    <li className={`horario ${c.status === 'cancelada' ? 'horario--cancelado' : ''}`} aria-busy={situacao?.fase === 'enviando'}>
+      <time className="horario__hora" dateTime={c.inicio}>{hora(c.inicio)}</time>
+      <article className="consulta">
+        <div className="consulta__principal">
+          <h3 className="consulta__paciente">{c.pacienteNome}</h3>
+          <p className="consulta__detalhes">{c.especialidade}</p>
+          <div className="consulta__selos">
+            {c.status === 'cancelada' && <Selo tom="perigo">Cancelada</Selo>}
+            {c.status === 'confirmada' && <Selo tom="info">Confirmada</Selo>}
+            {c.status === 'concluida' && <Selo tom="ok">Concluída</Selo>}
+            {c.status === 'falta' && <Selo tom="perigo">Faltou</Selo>}
+          </div>
+          {situacao?.fase === 'confirmado' && <p className="consulta__resultado consulta__resultado--ok" role="status">Situação atualizada.</p>}
+          {situacao && !travado && situacao.fase === 'recusado' && <p className="consulta__resultado consulta__resultado--erro" role="alert">{situacao.mensagem}</p>}
+          {situacao?.fase === 'incerto' && (
+            <p className="consulta__resultado consulta__resultado--alerta" role="alert">
+              O Agendamento não respondeu. Ainda não dá para saber se a situação mudou. A tela confere sozinha na próxima atualização; não repita o pedido.
+            </p>
+          )}
+        </div>
+        {consultaAtiva(c) && jaComecou && (
+          <div className="consulta__acoes">
+            <button type="button" className="botao botao--quieto" onClick={() => setConfirmando('concluida')} disabled={travado}>
+              <Check size={16} aria-hidden="true" /> Concluída
+            </button>
+            <button type="button" className="botao botao--quieto botao--texto-perigo" onClick={() => setConfirmando('falta')} disabled={travado}>
+              <X size={16} aria-hidden="true" /> Faltou
+            </button>
+          </div>
+        )}
+      </article>
+
+      {confirmando === 'concluida' && (
+        <Confirmacao
+          titulo="Marcar consulta como concluída?"
+          confirmar="Marcar como concluída"
+          aoFechar={() => setConfirmando(null)}
+          aoConfirmar={() => { setConfirmando(null); aoMudarSituacao('concluida'); }}
+        >
+          <p><strong>{c.pacienteNome}</strong>, {dataHora(c.inicio)}.</p>
+          <p>Depois de concluída, a consulta não pode mais ser remarcada ou cancelada pela tela.</p>
+        </Confirmacao>
+      )}
+      {confirmando === 'falta' && (
+        <Confirmacao
+          titulo="Registrar falta do paciente?"
+          confirmar="Registrar falta"
+          perigo
+          aoFechar={() => setConfirmando(null)}
+          aoConfirmar={() => { setConfirmando(null); aoMudarSituacao('falta'); }}
+        >
+          <p><strong>{c.pacienteNome}</strong>, {dataHora(c.inicio)}.</p>
+          <p>Depois de registrada, a falta não pode mais ser desfeita pela tela.</p>
+        </Confirmacao>
+      )}
+    </li>
   );
 }

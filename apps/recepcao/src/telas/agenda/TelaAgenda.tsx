@@ -16,6 +16,7 @@ import { CartaoConsulta } from './CartaoConsulta';
 import { useCancelamentos } from './cancelamentos';
 import { DialogoRemarcar } from './DialogoRemarcar';
 import { GavetaNovaConsulta } from './GavetaNovaConsulta';
+import { useMudancasSituacao } from './situacao';
 
 const INTERVALO_MS = 3000;
 
@@ -31,6 +32,7 @@ export function TelaAgenda() {
   const [nova, setNova] = useState(false);
   const [remarcando, setRemarcando] = useState<Consulta | null>(null);
   const cancelamentos = useCancelamentos(consultas.data, consultas.dataUpdatedAt);
+  const situacoes = useMudancasSituacao(consultas.data, consultas.dataUpdatedAt);
 
   const atualizarTudo = () => Promise.all([
     cliente.invalidateQueries({ queryKey: ['consultas'] }),
@@ -140,8 +142,10 @@ export function TelaAgenda() {
                 lembrete={lembretePorConsulta.get(c.id)}
                 frescorLembretes={lembretes.frescor}
                 cancelamento={cancelamentos.estado(c)}
+                situacao={situacoes.estado(c)}
                 aoRemarcar={() => setRemarcando(c)}
                 aoCancelar={() => cancelamentos.cancelar(c, atualizarTudo)}
+                aoMudarSituacao={(nova) => situacoes.mudar(c, nova, atualizarTudo)}
               />
             ))}
           </ol>

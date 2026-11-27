@@ -1,9 +1,9 @@
 import { chamar } from './cliente';
 import type {
-  Atividade, Autorizacao, Canal, ConfiguracaoEnvio, Consulta, ConsultaPaciente, DadosNovaConsulta, EdicaoPaciente,
-  ErroNaFila, EstadoConsumo, EventoPublicado, HorariosDisponiveis, Lembrete, OrigemAutorizacao, PacienteDetalhado,
-  PaginaLembretes, PaginaPacientes, Perfil, Profissional, ProfissionalPortal, Reprocessamento, Trilha, Usuario,
-  UsuarioListado,
+  Atividade, Autorizacao, Canal, ConfiguracaoEnvio, Consulta, ConsultaPaciente, DadosNovaConsulta, Disponibilidade,
+  EdicaoPaciente, ErroNaFila, EstadoConsumo, EventoPublicado, HorariosDisponiveis, IntervaloDisponibilidade, Lembrete,
+  OrigemAutorizacao, PacienteDetalhado, PaginaLembretes, PaginaPacientes, Perfil, Profissional, ProfissionalPortal,
+  Reprocessamento, Trilha, Usuario, UsuarioListado,
 } from './tipos';
 
 const id = encodeURIComponent;
@@ -11,6 +11,7 @@ const id = encodeURIComponent;
 export const acesso = {
   entrar: (email: string, senha: string) =>
     chamar<{ usuario: Usuario; token: string }>('/api/cadastro/usuarios/login', { metodo: 'POST', corpo: { email, senha } }),
+  sair: () => chamar<unknown>('/api/cadastro/usuarios/logout', { metodo: 'POST' }),
   recuperarSenha: (email: string) =>
     chamar<{ mensagem: string }>('/api/cadastro/usuarios/recuperar-senha', { metodo: 'POST', corpo: { email } }),
   redefinirSenha: (codigo: string, novaSenha: string) =>
@@ -24,9 +25,19 @@ export const agendamento = {
     chamar<Consulta>(`/api/agendamento/consultas/${id(idConsulta)}`, { metodo: 'PATCH', corpo: { inicio }, prazoMs: 10_000 }),
   cancelar: (idConsulta: string) =>
     chamar<Consulta>(`/api/agendamento/consultas/${id(idConsulta)}`, { metodo: 'DELETE', prazoMs: 10_000 }),
+  mudarSituacao: (idConsulta: string, status: 'confirmada' | 'concluida' | 'falta') =>
+    chamar<Consulta>(`/api/agendamento/consultas/${id(idConsulta)}/status`, { metodo: 'PATCH', corpo: { status }, prazoMs: 10_000 }),
   profissionais: (sinal?: AbortSignal) => chamar<Profissional[]>('/api/agendamento/profissionais', { sinal }),
   cadastrarProfissional: (dados: { nome: string; especialidade: string }) =>
     chamar<Profissional>('/api/agendamento/profissionais', { metodo: 'POST', corpo: dados }),
+  atualizarProfissional: (idProfissional: string, dados: { nome?: string; especialidade?: string; duracaoConsultaMinutos?: number }) =>
+    chamar<Profissional>(`/api/agendamento/profissionais/${id(idProfissional)}`, { metodo: 'PATCH', corpo: dados }),
+  definirStatusProfissional: (idProfissional: string, ativo: boolean) =>
+    chamar<Profissional>(`/api/agendamento/profissionais/${id(idProfissional)}/status`, { metodo: 'PATCH', corpo: { ativo } }),
+  disponibilidade: (idProfissional: string, sinal?: AbortSignal) =>
+    chamar<Disponibilidade>(`/api/agendamento/profissionais/${id(idProfissional)}/disponibilidade`, { sinal }),
+  definirDisponibilidade: (idProfissional: string, intervalos: IntervaloDisponibilidade[]) =>
+    chamar<Disponibilidade>(`/api/agendamento/profissionais/${id(idProfissional)}/disponibilidade`, { metodo: 'PUT', corpo: { intervalos }, prazoMs: 10_000 }),
   eventos: (sinal?: AbortSignal) => chamar<EventoPublicado[]>('/api/agendamento/eventos?limite=40', { sinal }),
   reenviarUltimoEvento: () => chamar<unknown>('/api/agendamento/demo/reenviar-ultimo-evento', { metodo: 'POST' }),
 };

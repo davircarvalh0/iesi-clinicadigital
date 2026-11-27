@@ -284,6 +284,13 @@
 .chip-horario:hover { border-color: var(--marca-borda); background: var(--marca-claro); }
 .chip-horario--escolhido, .chip-horario--escolhido:hover { background: var(--marca); border-color: var(--marca); color: #fff; }
 
+/* ---------- Disponibilidade ---------- */
+.disponibilidade__dia { display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-bottom: 1px solid var(--linha-suave); }
+.disponibilidade__titulo { font-size: var(--t1); font-weight: 600; }
+.disponibilidade__intervalo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.disponibilidade__intervalo input[type="time"] { padding: 8px 10px; border: 1px solid var(--linha); border-radius: var(--raio); font: inherit; }
+.disponibilidade__intervalo input[type="time"]:focus { outline: none; border-color: var(--marca); box-shadow: var(--foco); }
+
 /* ---------- Telas menores ---------- */
 @media (max-width: 1280px) {
   .estrutura--com-painel { grid-template-columns: 248px minmax(0, 1fr); }
