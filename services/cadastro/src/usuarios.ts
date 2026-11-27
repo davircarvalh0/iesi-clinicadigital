@@ -7,6 +7,7 @@ import type { Prisma } from '../generated/prisma';
 import { prisma } from './db';
 import { enfileirar, ErroCadastro } from './servico';
 import { encerrarSessoes, exigirSessao } from './sessao';
+import { entregarCodigo, recuperacaoConfigurada } from './recuperacao-email';
 
 const derivar = promisify(scrypt);
 const senha = z.string().min(12).max(128);
@@ -57,10 +58,8 @@ export async function inicializarAdministrador() {
  * Entrega do código de recuperação. Não há serviço de e-mail no protótipo: o envio é simulado no log
  * do Cadastro (como CANAL_ENVIO=log na Notificação). O e-mail não vai para o log.
  */
-export type EntregaRecuperacao = (codigo: string) => void;
-let entregarRecuperacao: EntregaRecuperacao = (codigo) => {
-  console.log(`[cadastro] recuperação de senha (envio simulado; destinatário omitido): código ${codigo}, válido por 30 min`);
-};
+export type EntregaRecuperacao = (codigo: string, email: string) => void | Promise<void>;
+let entregarRecuperacao: EntregaRecuperacao = entregarCodigo;
 export function definirEntregaRecuperacao(entrega: EntregaRecuperacao) { entregarRecuperacao = entrega; }
 
 /** Limite simples por IP e rota: 10 falhas por minuto. */
@@ -101,8 +100,16 @@ rotasUsuarios.post('/login', async (req, res) => {
   tentativasLogin.limpar(req);
   if (!usuario.ativo) { res.status(403).json({ erro: 'Conta desativada. Procure o administrador da clínica.' }); return; }
   const expiraEm = new Date(Date.now() + DURACAO_ACESSO_MS);
-  const sessao = await prisma.sessao.create({ data: { usuarioId: usuario.id, expiraEm } });
-  const { id, nome, perfil, profissionalId, pacienteId } = usuario;
+  const resultado = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${usuario.id} FOR UPDATE`;
+    const atual = await tx.usuario.findUnique({ where: { id: usuario.id } });
+    if (!atual || !atual.ativo || atual.senhaHash !== usuario.senhaHash || atual.email !== entrada.email) return null;
+    const sessao = await tx.sessao.create({ data: { usuarioId: atual.id, expiraEm } });
+    return { atual, sessao };
+  });
+  if (!resultado) { res.status(401).json({ erro: 'Credenciais alteradas. Entre novamente.' }); return; }
+  const { atual, sessao } = resultado;
+  const { id, nome, perfil, profissionalId, pacienteId } = atual;
   const identidade = { id, nome, perfil, profissionalId, ...(perfil === 'paciente' ? { pacienteId } : {}) };
   res.json({ usuario: identidade, token: emitirAcesso(identidade, sessao.id), expiraEm });
 });
@@ -110,6 +117,7 @@ rotasUsuarios.post('/login', async (req, res) => {
 const tentativasRecuperacao = limitador();
 const RESPOSTA_RECUPERACAO = { mensagem: 'Se o e-mail estiver cadastrado, enviaremos um código para redefinir a senha.' };
 rotasUsuarios.post('/recuperar-senha', async (req, res) => {
+  if (!recuperacaoConfigurada()) { res.status(503).json({ erro: 'Recuperação indisponível: procure a administração da clínica.' }); return; }
   if (tentativasRecuperacao.bloqueado(req)) { res.status(429).json(MUITAS_TENTATIVAS); return; }
   const entrada = z.object({ email }).parse(req.body);
   tentativasRecuperacao.falhou(req); // conta todo pedido: o limite vale também para e-mails existentes
@@ -117,12 +125,21 @@ rotasUsuarios.post('/recuperar-senha', async (req, res) => {
   // Mesma resposta com ou sem conta: a rota não revela quais e-mails existem.
   if (usuario?.ativo) {
     const codigo = randomBytes(24).toString('base64url');
-    await prisma.$transaction(async (tx) => {
+    const pedido = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${usuario.id} FOR UPDATE`;
+      const atual = await tx.usuario.findUnique({ where: { id: usuario.id }, select: { ativo: true, email: true } });
+      if (!atual?.ativo || atual.email !== entrada.email) return null;
       // Um pedido novo invalida os anteriores ainda não usados.
       await tx.redefinicaoSenha.updateMany({ where: { usuarioId: usuario.id, usadaEm: null }, data: { usadaEm: new Date() } });
-      await tx.redefinicaoSenha.create({ data: { usuarioId: usuario.id, codigoHash: hashCodigo(codigo), expiraEm: new Date(Date.now() + VALIDADE_RECUPERACAO_MS) } });
+      return tx.redefinicaoSenha.create({ data: { usuarioId: usuario.id, codigoHash: hashCodigo(codigo), expiraEm: new Date(Date.now() + VALIDADE_RECUPERACAO_MS) } });
     });
-    entregarRecuperacao(codigo);
+    if (pedido) {
+      try { await entregarRecuperacao(codigo, entrada.email); }
+      catch {
+        await prisma.redefinicaoSenha.updateMany({ where: { id: pedido.id, usadaEm: null }, data: { usadaEm: new Date() } });
+        console.error('[cadastro] falha na entrega da recuperação');
+      }
+    }
   }
   res.status(202).json(RESPOSTA_RECUPERACAO);
 });
@@ -137,9 +154,13 @@ rotasUsuarios.post('/redefinir-senha', async (req, res) => {
     const agora = new Date();
     const pedido = await tx.redefinicaoSenha.findUnique({ where: { codigoHash: hashCodigo(entrada.codigo) }, include: { usuario: { select: { ativo: true } } } });
     if (!pedido || !pedido.usuario.ativo) return false;
+    await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${pedido.usuarioId} FOR UPDATE`;
+    const atual = await tx.usuario.findUnique({ where: { id: pedido.usuarioId }, select: { ativo: true } });
+    if (!atual?.ativo) return false;
     const marcado = await tx.redefinicaoSenha.updateMany({ where: { id: pedido.id, usadaEm: null, expiraEm: { gt: agora } }, data: { usadaEm: agora } });
     if (!marcado.count) return false;
     await tx.usuario.update({ where: { id: pedido.usuarioId }, data: { senhaHash: novaHash } });
+    await tx.redefinicaoSenha.updateMany({ where: { usuarioId: pedido.usuarioId, usadaEm: null }, data: { usadaEm: agora } });
     await encerrarSessoes(tx, pedido.usuarioId);
     return true;
   });
@@ -149,6 +170,8 @@ rotasUsuarios.post('/redefinir-senha', async (req, res) => {
 });
 
 // ---------- qualquer perfil, com sessão ----------
+rotasUsuarios.get('/sessao', exigirSessao(), (_req, res) => { res.sendStatus(204); });
+
 rotasUsuarios.post('/logout', exigirSessao(), async (_req, res) => {
   await prisma.sessao.updateMany({ where: { id: eu(res).sessaoId, encerradaEm: null }, data: { encerradaEm: new Date() } });
   res.sendStatus(204);
@@ -161,7 +184,9 @@ rotasUsuarios.patch('/minha-conta/senha', exigirSessao(), async (req, res) => {
   if (!await conferir(entrada.senhaAtual, usuario.senhaHash)) throw new ErroCadastro(400, 'Senha atual incorreta.');
   const senhaHash = await hash(entrada.novaSenha);
   await prisma.$transaction(async (tx) => {
-    await tx.usuario.update({ where: { id: usuario.id }, data: { senhaHash } });
+    const resultado = await tx.usuario.updateMany({ where: { id: usuario.id, senhaHash: usuario.senhaHash, ativo: true }, data: { senhaHash } });
+    if (!resultado.count) throw new ErroCadastro(409, 'A conta foi alterada. Entre novamente.');
+    await tx.redefinicaoSenha.updateMany({ where: { usuarioId: usuario.id, usadaEm: null }, data: { usadaEm: new Date() } });
     // Mantém a sessão de quem trocou; derruba as outras (outro computador, senha vazada).
     await encerrarSessoes(tx, usuario.id, eu(res).sessaoId);
   });
@@ -179,6 +204,7 @@ rotasUsuarios.patch('/minha-conta', exigirSessao(), async (req, res) => {
   try {
     res.json(await prisma.$transaction(async (tx) => {
       const atualizado = await tx.usuario.update({ where: { id: conta.id }, data: { nome: dados.nome, email: dados.email }, select: publico });
+      if (dados.email !== undefined) await tx.redefinicaoSenha.updateMany({ where: { usuarioId: conta.id, usadaEm: null }, data: { usadaEm: new Date() } });
       if (conta.pacienteId && (dados.nome !== undefined || dados.telefone !== undefined)) {
         const paciente = await tx.paciente.update({ where: { id: conta.pacienteId }, data: { nome: dados.nome, telefone: dados.telefone, revisao: { increment: 1 } } });
         await enfileirar(tx, paciente, `paciente-${paciente.id}`);
@@ -247,6 +273,7 @@ rotasUsuarios.patch('/:id', async (req, res) => {
         select: publico,
       });
       // O token carrega nome, perfil e vínculo: quem mudou de acesso precisa entrar de novo.
+      if (mudancas.email !== undefined) await tx.redefinicaoSenha.updateMany({ where: { usuarioId: atual.id, usadaEm: null }, data: { usadaEm: new Date() } });
       if (final.perfil !== atual.perfil || final.profissionalId !== atual.profissionalId) await encerrarSessoes(tx, atual.id);
       return atualizado;
     }));

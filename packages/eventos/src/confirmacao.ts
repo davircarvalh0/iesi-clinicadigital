@@ -11,6 +11,7 @@ export interface PayloadConsultaConfirmada {
   canal: 'whatsapp';
   /** ISO 8601: quando a resposta do paciente chegou. */
   confirmada_em: string;
+  sequencia?: number;
 }
 
 export type ConsultaConfirmada = EnvelopeEvento<'consulta.confirmada', PayloadConsultaConfirmada>;
@@ -22,5 +23,6 @@ export function validarConsultaConfirmada(valor: unknown): Validacao<ConsultaCon
   if (!ehTextoPreenchido(p.id_consulta)) return { ok: false, motivo: 'payload.id_consulta ausente' };
   if (p.canal !== 'whatsapp') return { ok: false, motivo: 'payload.canal inválido' };
   if (!ehDataValida(p.confirmada_em)) return { ok: false, motivo: 'payload.confirmada_em inválido' };
+  if (p.sequencia !== undefined && (typeof p.sequencia !== 'number' || !Number.isInteger(p.sequencia) || p.sequencia < 1)) return { ok: false, motivo: 'payload.sequencia inválida' };
   return { ok: true, evento: valor as ConsultaConfirmada };
 }

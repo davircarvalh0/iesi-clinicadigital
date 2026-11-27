@@ -37,3 +37,14 @@ export function verificarAcesso(authorization: string | undefined): IdentidadeAc
     };
   } catch { return null; }
 }
+
+export async function verificarSessaoRemota(authorization: string | undefined): Promise<IdentidadeAcesso | null> {
+  const identidade = verificarAcesso(authorization);
+  if (!identidade?.sessaoId || !authorization) return null;
+  const resposta = await fetch(new URL('/usuarios/sessao', process.env.CADASTRO_AUTH_URL ?? 'http://localhost:3003'), {
+    headers: { Authorization: authorization }, signal: AbortSignal.timeout(3000),
+  });
+  if (resposta.status === 401) return null;
+  if (!resposta.ok) throw new Error('Identidade indisponível');
+  return identidade;
+}

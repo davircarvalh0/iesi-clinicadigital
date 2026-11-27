@@ -53,11 +53,12 @@ const buscarConsulta = async (id) => {
   return dados?.find((consulta) => consulta.id === id);
 };
 
+let deslocamento = 0;
 async function agendar(cpf, paciente) {
   const resposta = await api('agendamento/consultas', {
     cpf, nome: paciente?.nome ?? 'Paciente Fictício US08', telefone: paciente?.telefone ?? '81900000008',
     idPaciente: paciente?.id, profissional: profissionalDeTeste(), especialidade: 'Teste',
-    inicio: new Date(Date.now() + 7 * 86400000).toISOString(),
+    inicio: new Date(Date.now() + 7 * 86400000 + deslocamento++ * 3600000).toISOString(),
   });
   assert.equal(resposta.status, 201);
   assert.equal(resposta.dados.idPaciente, paciente?.id ?? null);
@@ -150,6 +151,7 @@ test('US-08: Cadastro parado, consulta pendente e recuperação pela fila', { ti
   } finally {
     await compose('start');
   }
+  await aguardar(async () => (await api('agendamento/consultas')).status, (status) => status === 200, 'validação de sessão recuperada');
   const confirmada = await aguardarVinculo(consulta);
   const mestre = await buscar(cpf);
   assert.equal(mestre.status, 200);

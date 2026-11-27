@@ -45,6 +45,7 @@ const em = (n, hora, agora) => `${dia(n, agora)}T${hora}:00-03:00`;
 
 /** Consultas da demonstração. A última é cancelada logo depois de agendada. */
 export function consultasDemo(agora = Date.now()) {
+  if (Date.parse(em(0, '08:30', agora)) <= agora) agora += 86_400_000;
   return [
     { ...maria, profissional: 'Dra. Ana Exemplo', especialidade: 'Cardiologia', inicio: em(0, '08:30', agora) },
     { ...davi, profissional: 'Dr. Paulo Exemplo', especialidade: 'Pediatria', inicio: em(0, '10:00', agora) },

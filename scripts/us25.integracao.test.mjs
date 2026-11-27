@@ -43,6 +43,8 @@ test('logout encerra a sessão no Cadastro', async () => {
   assert.equal((await api('cadastro/pacientes', { token })).status, 200);
   assert.equal((await api('cadastro/usuarios/logout', { token, method: 'POST' })).status, 204);
   assert.equal((await api('cadastro/pacientes', { token })).status, 401);
+  assert.equal((await api('agendamento/consultas', { token })).status, 401);
+  assert.equal((await api('notificacao/lembretes', { token })).status, 401);
   assert.equal((await api('cadastro/usuarios/logout', { method: 'POST' })).status, 401);
 });
 

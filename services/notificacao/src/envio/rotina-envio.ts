@@ -172,6 +172,7 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
       const registro = await tx.tentativaEnvio.create({
         data: {
           idLembrete: atual.id, idConsulta: atual.idConsulta, idEventoConsulta: atual.idEventoConsulta,
+            sequenciaConsulta: atual.sequenciaAplicada,
           numero: tentativas, canal: canal.nome, modo,
         },
         select: { id: true },

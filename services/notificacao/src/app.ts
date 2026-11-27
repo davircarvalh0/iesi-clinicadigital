@@ -1,5 +1,5 @@
 import express from 'express';
-import { verificarAcesso } from '@clinica/eventos';
+import { verificarSessaoRemota, type IdentidadeAcesso } from '@clinica/eventos';
 import { rotasAtividades } from './atividades/rotas';
 import { rotasAutorizacoes } from './autorizacoes/rotas';
 import { rotasDemoWhatsapp, rotasWebhookWhatsapp } from './confirmacoes/rotas';
@@ -9,7 +9,7 @@ import { tratarErros } from './http/erros';
 import { rotasLembretes } from './lembretes/rotas';
 import { rotasOperacao } from './reprocessamento/rotas';
 
-export function criarApp() {
+export function criarApp(identificar: (authorization: string | undefined) => IdentidadeAcesso | null | Promise<IdentidadeAcesso | null> = verificarSessaoRemota) {
   const app = express();
   // US-30: guarda o corpo bruto para conferir a assinatura do webhook do WhatsApp.
   app.use(express.json({ verify: (req, _res, corpo) => { (req as { corpoBruto?: Buffer }).corpoBruto = corpo; } }));
@@ -19,9 +19,11 @@ export function criarApp() {
   });
   // US-30: chamado pela Meta, sem login; protegido pela assinatura (confirmacoes/rotas.ts).
   app.use('/whatsapp', rotasWebhookWhatsapp);
-  app.use((req, res, next) => {
+  app.use(async (req, res, next) => {
     res.set('Cache-Control', 'no-store');
-    const usuario = verificarAcesso(req.headers.authorization);
+    let usuario: IdentidadeAcesso | null;
+    try { usuario = await identificar(req.headers.authorization); }
+    catch { res.status(503).json({ erro: 'Validação de sessão indisponível.' }); return; }
     if (!usuario) { res.status(401).json({ erro: 'Login obrigatório.' }); return; }
     // Só a equipe da recepção; profissional e paciente (US-27) não veem lembretes de outros.
     if (usuario.perfil !== 'administrador' && usuario.perfil !== 'recepcionista') { res.status(403).json({ erro: 'Acesso restrito.' }); return; }

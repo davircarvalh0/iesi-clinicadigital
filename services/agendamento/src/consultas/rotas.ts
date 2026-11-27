@@ -37,7 +37,7 @@ rotasConsultas.get('/:id', async (req, res) => {
   const consulta = await prisma.consulta.findUnique({ where: { id: id(req.params.id) } });
   const visivel = consulta && (usuario.perfil === 'administrador' || usuario.perfil === 'recepcionista'
     || (usuario.perfil === 'profissional' && consulta.profissionalId === usuario.profissionalId)
-    || (usuario.perfil === 'paciente' && consulta.idPaciente === usuario.pacienteId));
+    || (usuario.perfil === 'paciente' && !consulta.vinculoPacientePendente && consulta.idPaciente === usuario.pacienteId));
   if (!visivel) throw new ErroHttp(404, 'Consulta não encontrada');
   res.json(usuario.perfil === 'paciente' ? paraPaciente(consulta) : consulta);
 });

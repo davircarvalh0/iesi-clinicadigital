@@ -158,6 +158,7 @@ model TentativaEnvio {
   idConsulta       String             @map("id_consulta")
   /// Evento de consulta que programou ou remarcou o lembrete no momento da tentativa.
   idEventoConsulta String?            @map("id_evento_consulta")
+  sequenciaConsulta Int?             @map("sequencia_consulta")
   /// Número da tentativa dentro da programação atual (reinicia na remarcação, como `tentativas`).
   numero           Int
   canal            CanalLembrete

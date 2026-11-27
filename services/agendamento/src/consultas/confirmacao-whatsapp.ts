@@ -12,7 +12,7 @@ export async function aplicarConfirmacaoWhatsapp(evento: ConsultaConfirmada): Pr
     const registro = await tx.eventoProcessado.createMany({ data: { idEvento: evento.id_evento }, skipDuplicates: true });
     if (!registro.count) return 'duplicada';
     try {
-      await aplicarSituacao(tx, evento.payload.id_consulta, 'confirmada', 'whatsapp', new Date(evento.payload.confirmada_em));
+      await aplicarSituacao(tx, evento.payload.id_consulta, 'confirmada', 'whatsapp', new Date(evento.payload.confirmada_em), evento.payload.sequencia);
       return 'confirmada';
     } catch (erro) {
       // A regra recusou antes de qualquer escrita; a transação segue só com o registro do evento.

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { createHmac, randomInt, randomUUID } from 'node:crypto';
 import { test } from 'node:test';
-import { aguardar, api, cpfFicticio, criarProfissional, entrarAdmin } from './apoio-api.mjs';
+import { aguardar, api, cpfFicticio, criarProfissional, entrarAdmin, registrarAceiteWhatsappFixture } from './apoio-api.mjs';
 
 const base = process.env.TEST_BASE_URL ?? 'http://localhost:8080';
 const telefoneUnico = () => `819${String(randomInt(100_000_000)).padStart(8, '0')}`;
@@ -77,5 +77,15 @@ test('US-30: webhook público só aceita mensagem assinada pela Meta', async () 
   assert.equal((await enviar(corpo, `sha256=${createHmac('sha256', 'segredo-errado').update(corpo).digest('hex')}`)).status, 401);
   assert.equal((await api(`agendamento/consultas/${consulta.id}`, { token: admin })).dados.status, 'agendada');
   assert.equal((await enviar(corpo, `sha256=${createHmac('sha256', segredo).update(corpo).digest('hex')}`)).status, 200);
-  await aguardar(() => api(`agendamento/consultas/${consulta.id}`, { token: admin }).then((r) => r.dados), (c) => c.status === 'confirmada', 'confirmação pelo webhook');
+  // O lembrete simulado não tem ID de mensagem original da Meta; não deve confirmar uma consulta.
+  assert.equal((await api(`agendamento/consultas/${consulta.id}`, { token: admin })).dados.status, 'agendada');
+
+  const mensagemOriginal = `wamid.${randomUUID()}`;
+  registrarAceiteWhatsappFixture(consulta.id, mensagemOriginal);
+  const resposta = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{
+    id: `wamid.${randomUUID()}`, from: `55${telefone}`, timestamp: String(Math.floor(Date.now() / 1000)),
+    type: 'text', text: { body: 'confirmo' }, context: { id: mensagemOriginal },
+  }] } }] }] });
+  assert.equal((await enviar(resposta, `sha256=${createHmac('sha256', segredo).update(resposta).digest('hex')}`)).status, 200);
+  await aguardar(() => api(`agendamento/consultas/${consulta.id}`, { token: admin }).then(r => r.dados), c => c.status === 'confirmada', 'confirmação vinculada à mensagem');
 });

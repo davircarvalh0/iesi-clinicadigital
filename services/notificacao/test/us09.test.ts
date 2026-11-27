@@ -1,5 +1,6 @@
 // US-09: listagem dedicada de lembretes (GET /lembretes/painel).
 import assert from 'node:assert/strict';
+import { verificarAcesso } from '@clinica/eventos';
 import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { Server } from 'node:http';
@@ -13,7 +14,7 @@ before(async () => {
   // A configuração exige RABBITMQ_URL ao ser carregada; nenhuma conexão é aberta nestes testes.
   process.env.RABBITMQ_URL ??= 'amqp://teste:teste@localhost:5672';
   const { criarApp } = await import('../src/app');
-  servidor = criarApp().listen(0, '127.0.0.1');
+  servidor = criarApp(verificarAcesso).listen(0, '127.0.0.1');
   await once(servidor, 'listening');
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
 });

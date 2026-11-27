@@ -1,5 +1,6 @@
 // US-13: trilha rastreável das tentativas de envio (GET /lembretes/:idConsulta/trilha).
 import assert from 'node:assert/strict';
+import { verificarAcesso } from '@clinica/eventos';
 import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { Server } from 'node:http';
@@ -16,7 +17,7 @@ before(async () => {
   if (process.env.TEST_DATABASE_URL) process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
   process.env.RABBITMQ_URL ??= 'amqp://teste:teste@localhost:5672';
   const { criarApp } = await import('../src/app');
-  servidor = criarApp().listen(0, '127.0.0.1');
+  servidor = criarApp(verificarAcesso).listen(0, '127.0.0.1');
   await once(servidor, 'listening');
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
 });
