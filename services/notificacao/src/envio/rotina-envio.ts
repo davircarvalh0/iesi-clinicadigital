@@ -68,7 +68,7 @@ export async function recuperarReservasExpiradas(reservaExpiraMs: number, agora 
           ? { status: 'programado' }
           : {
             status: 'incerto',
-            motivoFalha: MOTIVO_INTERROMPIDO,
+            motivoFalha: aberta?.canal === 'email' ? 'Envio de e-mail interrompido sem confirmação: a mensagem pode ter sido enviada' : MOTIVO_INTERROMPIDO,
             incertoResolvidoEm: null,
             tentativas: aberta?.numero ?? l.tentativas + 1,
             canalEnvio: aberta?.canal ?? l.canalEnvio,
@@ -81,13 +81,13 @@ export async function recuperarReservasExpiradas(reservaExpiraMs: number, agora 
           where: { id: aberta.id },
           data: simulado
             ? { resultado: 'falhou', motivo: 'Interrompida antes do desfecho; envio simulado repetido', concluidaEm: agora }
-            : { resultado: 'indeterminado', motivo: MOTIVO_INTERROMPIDO, concluidaEm: agora },
+            : { resultado: 'indeterminado', motivo: aberta.canal === 'email' ? 'Envio de e-mail interrompido sem confirmação: a mensagem pode ter sido enviada' : MOTIVO_INTERROMPIDO, concluidaEm: agora },
         });
       }
       const base = { idConsulta: l.idConsulta, idEvento: l.idEventoConsulta ?? undefined };
       await registrarAtividade(simulado
         ? { ...base, acao: 'envio.retomado', descricao: 'Envio simulado interrompido; o lembrete voltou à fila' }
-        : { ...base, acao: 'lembrete.incerto', descricao: MOTIVO_INTERROMPIDO }, tx);
+        : { ...base, acao: 'lembrete.incerto', descricao: aberta?.canal === 'email' ? 'Envio de e-mail interrompido sem confirmação: a mensagem pode ter sido enviada' : MOTIVO_INTERROMPIDO }, tx);
       return true;
     });
     if (ok) recuperados++;
@@ -165,7 +165,7 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
     // US-13: a tentativa é registrada na mesma transação da reserva, antes da chamada ao canal.
     // Se o processo cair durante a chamada, a trilha mostra uma tentativa sem desfecho.
     const tentativas = atual.tentativas + 1;
-    const modo = canal.nome === 'log' ? 'simulado' as const : 'real' as const;
+    const modo = canal.simulado || canal.nome === 'log' ? 'simulado' as const : 'real' as const;
     const idTentativa = await prisma.$transaction(async (tx) => {
       const reserva = await tx.lembrete.updateMany({ where: { ...programacao, tentativas: atual.tentativas }, data: { status: 'enviando' } });
       if (!reserva.count) return null; // o estado mudou entre a leitura e a reserva (ou outra execução já a tomou)
@@ -208,7 +208,7 @@ async function enviar(canal: CanalEnvio, lembrete: Lembrete, maxTentativas: numb
         acao: resultado.status === 'simulado' ? 'lembrete.simulado' : 'lembrete.aceito_provedor',
         descricao: resultado.status === 'simulado'
           ? 'Envio simulado em log'
-          : 'WhatsApp aceitou a mensagem para processamento',
+          : resultado.canalEnvio === 'email' ? 'Provedor de e-mail aceitou a mensagem para processamento' : 'WhatsApp aceitou a mensagem para processamento',
       }, { resultado: resultado.status, idExterno: resultado.idExterno });
       return;
     }
@@ -253,9 +253,13 @@ type DesfechoChamada =
 
 async function tentarEnvio(canal: CanalEnvio, lembrete: Lembrete): Promise<DesfechoChamada> {
   try {
+    const contato = canal.canalContato === 'email' && lembrete.pacienteCpf
+      ? await prisma.contatoPaciente.findUnique({ where: { cpf: lembrete.pacienteCpf }, select: { email: true, nome: true } })
+      : null;
     const resultado = await canal.enviar({
       telefone: paraFormatoInternacional(lembrete.telefone),
-      pacienteNome: lembrete.pacienteNome,
+      email: contato?.email,
+      pacienteNome: contato?.nome ?? lembrete.pacienteNome,
       especialidade: lembrete.especialidade,
       profissional: lembrete.profissional,
       inicioConsulta: lembrete.inicioConsulta,

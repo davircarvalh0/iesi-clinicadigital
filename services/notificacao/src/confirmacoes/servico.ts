@@ -43,6 +43,7 @@ export async function receberResposta(r: RespostaRecebida) {
         status: { in: [...SITUACOES_RESPONDIVEIS] },
         inicioConsulta: { gt: r.recebidaEm },
         consultaCanceladaEm: null,
+        canalEnvio: { in: ['whatsapp', 'log'] },
         ...(r.idMensagemOriginal ? { idExterno: r.idMensagemOriginal, status: 'aceito_provedor' as const } : {}),
       },
       orderBy: { inicioConsulta: 'asc' },
@@ -50,7 +51,7 @@ export async function receberResposta(r: RespostaRecebida) {
     });
     const tentativa = lembrete ? await tx.tentativaEnvio.findFirst({
       where: { idLembrete: lembrete.id,
-        ...(r.idMensagemOriginal ? { idExterno: r.idMensagemOriginal, resultado: 'aceito_provedor' as const } : { resultado: 'simulado' as const }) },
+        ...(r.idMensagemOriginal ? { canal: 'whatsapp' as const, idExterno: r.idMensagemOriginal, resultado: 'aceito_provedor' as const } : { canal: 'log' as const, resultado: 'simulado' as const }) },
       orderBy: { iniciadaEm: 'desc' },
       select: { sequenciaConsulta: true },
     }) : null;
