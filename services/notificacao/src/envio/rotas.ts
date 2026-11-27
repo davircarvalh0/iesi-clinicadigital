@@ -11,5 +11,6 @@ rotasEnvio.get('/configuracao', (_req, res) => {
     antecedenciaMinutos: config.antecedenciaMinutos,
     modoAntecedencia: config.modoAntecedencia,
     maxTentativas: config.envioMaxTentativas,
+    envioAutomaticoHabilitado: config.envioAutomaticoHabilitado,
   });
 });

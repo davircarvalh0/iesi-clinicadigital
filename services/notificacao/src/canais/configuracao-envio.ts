@@ -21,7 +21,7 @@ export function destinoPermitido(destinos: DestinosPermitidos, telefoneInternaci
 }
 
 export interface EntradaConfiguracaoEnvio {
-  canalEnvio: 'log' | 'whatsapp' | 'email';
+  canalEnvio: 'log' | 'whatsapp' | 'email' | 'email_log';
   email?: ConfigEmail;
   whatsapp: { token: string; phoneNumberId: string; destinosPermitidos: DestinosPermitidos };
 }
@@ -37,6 +37,9 @@ export interface DescricaoEnvio {
 }
 
 export function descreverEnvio({ canalEnvio, whatsapp, email }: EntradaConfiguracaoEnvio): DescricaoEnvio {
+  if (canalEnvio === 'email_log') {
+    return { modo: 'simulado', canal: 'email', canalContato: 'email', motivo: 'Envio de e-mail simulado em log.', destinosPermitidos: null };
+  }
   if (canalEnvio === 'email') {
     if (!email?.token.trim() || !email.remetente.trim()) {
       return { modo: 'simulado', canal: 'email', canalContato: 'email', motivo: 'E-mail sem credenciais: envio simulado em log.', destinosPermitidos: null };

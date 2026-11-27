@@ -23,9 +23,9 @@ async function main() {
   iniciarFilaErros(conexao);
   const pararPublicador = await iniciarPublicador(conexao);
 
-  const pararRotina = iniciarRotinaEnvio(criarCanalEnvio(), config.rotinaEnvioIntervaloMs, config.envioMaxTentativas, {
+  const pararRotina = config.envioAutomaticoHabilitado ? iniciarRotinaEnvio(criarCanalEnvio(), config.rotinaEnvioIntervaloMs, config.envioMaxTentativas, {
     reservaExpiraMs: config.envioReservaExpiraMs,
-  });
+  }) : () => {};
 
   const servidor = criarApp().listen(config.porta, () => {
     console.log(`[notificacao] ouvindo na porta ${config.porta} (modo ${config.modoAntecedencia}, antecedência ${config.antecedenciaMinutos} min)`);

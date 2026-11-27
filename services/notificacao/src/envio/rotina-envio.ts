@@ -97,6 +97,18 @@ export async function recuperarReservasExpiradas(reservaExpiraMs: number, agora 
 
 async function enviarVencidos(canal: CanalEnvio, maxTentativas: number): Promise<void> {
   const agora = new Date();
+  if (canal.canalContato === 'email') {
+    // A troca de canal pode encontrar lembretes bloqueados pela autorização do WhatsApp.
+    // Somente um consentimento de e-mail atual permite recolocá-los na fila.
+    await prisma.$executeRaw`
+      UPDATE lembretes AS l
+      SET status = 'programado', motivo_falha = NULL, tentativas = 0,
+          canal_envio = NULL, modo_envio = NULL, atualizado_em = now()
+      WHERE l.status = 'bloqueado' AND l.inicio_consulta > ${agora}
+        AND EXISTS (SELECT 1 FROM autorizacoes_contato AS a
+                    WHERE a.cpf = l.paciente_cpf AND a.canal = 'email' AND a.situacao = 'autorizado')
+    `;
+  }
   const vencidos = await prisma.lembrete.findMany({
     where: { status: 'programado', OR: [{ enviarEm: { lte: agora } }, { inicioConsulta: { lte: agora } }] },
     orderBy: { enviarEm: 'asc' },

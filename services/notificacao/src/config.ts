@@ -9,14 +9,15 @@ function obrigatoria(nome: string): string {
 }
 
 /** Canal cuja autorização é exigida, inclusive durante a simulação. */
-export const CANAL_LEMBRETE = process.env.CANAL_ENVIO === 'email' ? 'email' as const : 'whatsapp' as const;
+export const CANAL_LEMBRETE = ['email', 'email_log'].includes(process.env.CANAL_ENVIO ?? '') ? 'email' as const : 'whatsapp' as const;
 
 export const config = {
   porta: Number(process.env.PORTA ?? 3002),
   rabbitUrl: obrigatoria('RABBITMQ_URL'),
   ...lerConfiguracaoLembretes(process.env),
   consumidorMaxTentativas: Number(process.env.CONSUMIDOR_MAX_TENTATIVAS ?? 3),
-  canalEnvio: process.env.CANAL_ENVIO === 'email' ? 'email' : process.env.CANAL_ENVIO === 'whatsapp' ? 'whatsapp' : 'log',
+  envioAutomaticoHabilitado: process.env.ENVIO_AUTOMATICO_HABILITADO !== 'false',
+  canalEnvio: process.env.CANAL_ENVIO === 'email_log' ? 'email_log' : process.env.CANAL_ENVIO === 'email' ? 'email' : process.env.CANAL_ENVIO === 'whatsapp' ? 'whatsapp' : 'log',
   email: {
     token: process.env.RESEND_API_KEY ?? '',
     remetente: process.env.LEMBRETE_EMAIL_REMETENTE ?? '',
