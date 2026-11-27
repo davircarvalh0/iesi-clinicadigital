@@ -1,16 +1,13 @@
+import '@fontsource-variable/inter';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import { Acesso, AgendaProfissional } from './acesso';
-import { PortalPaciente } from './portal';
-import './styles/app.css';
+import { App } from './app/App';
+import './estilos/base.css';
+import './estilos/componentes.css';
+import './estilos/telas.css';
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('raiz')!).render(
   <StrictMode>
-    <Acesso renderizar={(usuario, sair) => {
-      if (usuario.perfil === 'profissional') return <AgendaProfissional usuario={usuario} sair={sair} />;
-      if (usuario.perfil === 'paciente') return <PortalPaciente usuario={usuario} sair={sair} />;
-      return <App usuario={usuario} sair={sair} />;
-    }} />
+    <App />
   </StrictMode>,
 );
