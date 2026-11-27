@@ -1,10 +1,11 @@
-import { Activity, Bell, CalendarDays, LogOut, Menu, Radio, ServerCog, UserCog, Users } from 'lucide-react';
+import { Activity, Bell, CalendarDays, LogOut, Menu, Radio, ServerCog, User, UserCog, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { RECEPCAO } from '../app/perfis';
 import { useLeitura } from '../app/leitura';
 import { useSessao, useUsuario } from '../app/sessao';
 import { saude, type NomeServico } from '../api/servicos';
+import { DialogoMinhaConta } from './DialogoMinhaConta';
 import { PainelIntegracao } from './PainelIntegracao';
 
 const NOME_PERFIL = { administrador: 'Administração', recepcionista: 'Recepção', profissional: 'Profissional', paciente: 'Paciente' } as const;
@@ -20,6 +21,7 @@ export function Estrutura() {
   const recepcao = RECEPCAO.includes(usuario.perfil);
   const [integracao, setIntegracao] = useState(lerPreferencia);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [minhaConta, setMinhaConta] = useState(false);
 
   useEffect(() => setMenuAberto(false), [local.pathname]);
   useEffect(() => {
@@ -57,12 +59,16 @@ export function Estrutura() {
             <span className="pessoa__nome">{usuario.nome}</span>
             <span className="pessoa__perfil">{NOME_PERFIL[usuario.perfil]}</span>
           </div>
+          <button type="button" className="botao botao--quieto botao--icone" onClick={() => setMinhaConta(true)} title="Minha conta" aria-label="Minha conta">
+            <User size={18} />
+          </button>
           <button type="button" className="botao botao--quieto botao--icone" onClick={() => sair()} title="Sair" aria-label="Sair">
             <LogOut size={18} />
           </button>
         </div>
       </aside>
       {menuAberto && <div className="lateral__fundo" onClick={() => setMenuAberto(false)} aria-hidden="true" />}
+      {minhaConta && <DialogoMinhaConta aoFechar={() => setMinhaConta(false)} />}
 
       <div className="centro">
         <div className="barra-topo">

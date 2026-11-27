@@ -10,6 +10,8 @@ interface Sessao {
   aviso: string | null;
   entrar: (email: string, senha: string) => Promise<void>;
   sair: (aviso?: string) => void;
+  /** Reflete na sessão local um dado da própria conta já salvo no Cadastro (ex.: nome, após editar "Minha conta"). */
+  atualizarUsuario: (usuario: Usuario) => void;
 }
 
 const Contexto = createContext<Sessao | null>(null);
@@ -67,7 +69,18 @@ export function ProvedorSessao({ children }: { children: ReactNode }) {
     setEstado({ usuario, token, aviso: null });
   }, []);
 
-  const valor = useMemo(() => ({ usuario: estado.usuario, aviso: estado.aviso, entrar, sair }), [estado.usuario, estado.aviso, entrar, sair]);
+  const atualizarUsuario = useCallback((usuario: Usuario) => {
+    setEstado((atual) => {
+      if (!atual.token) return atual;
+      try { sessionStorage.setItem(CHAVE, JSON.stringify({ usuario, token: atual.token })); } catch { /* sem armazenamento */ }
+      return { ...atual, usuario };
+    });
+  }, []);
+
+  const valor = useMemo(
+    () => ({ usuario: estado.usuario, aviso: estado.aviso, entrar, sair, atualizarUsuario }),
+    [estado.usuario, estado.aviso, entrar, sair, atualizarUsuario],
+  );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }
 
