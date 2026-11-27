@@ -4,4 +4,5 @@ import type { Perfil } from '../api/tipos';
 export const RECEPCAO: Perfil[] = ['recepcionista', 'administrador'];
 
 /** Primeira tela de cada perfil. */
-export const inicioDoPerfil = (perfil: Perfil) => (perfil === 'profissional' ? '/minha-agenda' : '/agenda');
+export const inicioDoPerfil = (perfil: Perfil) =>
+  perfil === 'profissional' ? '/minha-agenda' : perfil === 'paciente' ? '/portal' : '/agenda';

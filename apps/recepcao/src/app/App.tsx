@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import type { Perfil } from '../api/tipos';
 import { Estrutura } from '../layout/Estrutura';
+import { EstruturaPaciente } from '../layout/EstruturaPaciente';
 import { TelaEquipe } from '../telas/administracao/TelaEquipe';
 import { TelaOperacao } from '../telas/administracao/TelaOperacao';
 import { TelaAgenda } from '../telas/agenda/TelaAgenda';
@@ -10,6 +11,7 @@ import { TelaEntrar } from '../telas/entrar/TelaEntrar';
 import { TelaLembretes } from '../telas/lembretes/TelaLembretes';
 import { TelaPaciente } from '../telas/pacientes/TelaPaciente';
 import { TelaPacientes } from '../telas/pacientes/TelaPacientes';
+import { TelaPortal } from '../telas/portal/TelaPortal';
 import { TelaMinhaAgenda } from '../telas/profissional/TelaMinhaAgenda';
 import { inicioDoPerfil, RECEPCAO } from './perfis';
 import { ProvedorSessao, useSessao } from './sessao';
@@ -49,6 +51,9 @@ export function App() {
               <Route path="/minha-agenda" element={<Protegida perfis={['profissional']}><TelaMinhaAgenda /></Protegida>} />
               <Route path="/administracao/equipe" element={<Protegida perfis={['administrador']}><TelaEquipe /></Protegida>} />
               <Route path="/administracao/operacao" element={<Protegida perfis={['administrador']}><TelaOperacao /></Protegida>} />
+            </Route>
+            <Route element={<Protegida perfis={['paciente']}><EstruturaPaciente /></Protegida>}>
+              <Route path="/portal" element={<TelaPortal />} />
             </Route>
             <Route path="*" element={<Inicio />} />
           </Routes>
