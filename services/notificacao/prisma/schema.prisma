@@ -31,6 +31,7 @@ enum ModoEnvio {
 enum CanalLembrete {
   log
   whatsapp
+  email
 }
 
 /// Cópia local dos dados de contato necessários ao envio (vindos do evento, sem conteúdo clínico).
@@ -74,6 +75,7 @@ model ContatoPaciente {
   cpf      String @id
   nome     String
   telefone String
+  email    String?
   revisao  Int
 
   @@map("contatos_pacientes")
