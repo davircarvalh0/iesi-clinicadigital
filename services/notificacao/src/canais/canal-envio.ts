@@ -4,6 +4,7 @@ import type { CanalContato } from '@clinica/eventos';
 export interface MensagemLembrete {
   /** Telefone no formato internacional, só dígitos (ex.: 5581999999999). */
   telefone: string;
+  email?: string | null;
   pacienteNome: string;
   especialidade: string;
   profissional: string;
@@ -12,7 +13,7 @@ export interface MensagemLembrete {
 
 export type ResultadoEnvio =
   | { status: 'simulado'; modoEnvio: 'simulado'; canalEnvio: 'log'; idExterno: null }
-  | { status: 'aceito_provedor'; modoEnvio: 'real'; canalEnvio: 'whatsapp'; idExterno: string };
+  | { status: 'aceito_provedor'; modoEnvio: 'real'; canalEnvio: 'whatsapp' | 'email'; idExterno: string };
 
 /** O provedor recusou ou não foi alcançado: nenhuma mensagem saiu. */
 export class FalhaEnvio extends Error {
