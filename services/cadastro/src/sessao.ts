@@ -6,7 +6,7 @@ import { prisma } from './db';
 /**
  * US-25: no Cadastro, dono das contas, o token só vale com a sessão aberta e a conta ativa.
  * Logout, troca de senha, mudança de perfil e desativação encerram a sessão na hora.
- * (Agendamento e Notificação conferem só a assinatura e a validade de 30 min do token.)
+ * Agendamento e Notificação consultam o estado central antes de autorizar.
  */
 export async function identificar(authorization: string | undefined): Promise<IdentidadeAcesso | null> {
   const identidade = verificarAcesso(authorization);

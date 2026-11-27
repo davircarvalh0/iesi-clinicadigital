@@ -31,8 +31,8 @@ test('US-19 CA2: carga tem 6 consultas, 5 pacientes, 1 cancelamento e passa na v
   assert.equal(consultas.length, 6);
   assert.equal(new Set(consultas.map((c) => c.cpf)).size, 5);
   assert.equal(consultas.filter((c) => c.cancelar).length, 1);
-  assert.equal(consultas[0].inicio, '2026-11-24T08:30:00-03:00');
-  assert.equal(consultas[5].inicio, '2026-11-26T15:30:00-03:00');
+  assert.equal(consultas[0].inicio, '2026-11-25T08:30:00-03:00');
+  assert.equal(consultas[5].inicio, '2026-11-27T15:30:00-03:00');
   for (const c of consultas) {
     assert.ok(c.nome.trim().length >= 3);
     assert.ok(c.telefone.length >= 10 && c.telefone.length <= 13);

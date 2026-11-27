@@ -74,8 +74,11 @@ services:
     environment:
       PORTA: 3003
       AUTH_SECRET: ${AUTH_SECRET:-}
+      TEST_CONTROLS: ${TEST_CONTROLS:-false}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_SENHA: ${ADMIN_SENHA:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RECUPERACAO_REMETENTE: ${RECUPERACAO_REMETENTE:-}
       DATABASE_URL: postgresql://cadastro:cadastro@db-cadastro:5432/cadastro
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
     ports:
@@ -91,6 +94,23 @@ services:
       start_period: 60s
       start_interval: 2s
 
+  cadastro-identidade:
+    build:
+      context: .
+      dockerfile: services/cadastro/Dockerfile
+    command: ["node", "dist/identidade.js"]
+    restart: unless-stopped
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      DATABASE_URL: postgresql://cadastro:cadastro@db-cadastro:5432/cadastro
+    depends_on:
+      cadastro: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3010/saude"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+
   agendamento:
     build:
       context: .
@@ -99,6 +119,7 @@ services:
     environment:
       PORTA: 3001
       AUTH_SECRET: ${AUTH_SECRET:-}
+      CADASTRO_AUTH_URL: http://cadastro-identidade:3010
       TEST_CONTROLS: ${TEST_CONTROLS:-false}
       DATABASE_URL: postgresql://agendamento:agendamento@db-agendamento:5432/agendamento
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
@@ -107,6 +128,7 @@ services:
     depends_on:
       db-agendamento: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      cadastro-identidade: { condition: service_healthy }
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/saude"]
       interval: 5s
@@ -123,6 +145,7 @@ services:
     environment:
       PORTA: 3002
       AUTH_SECRET: ${AUTH_SECRET:-}
+      CADASTRO_AUTH_URL: http://cadastro-identidade:3010
       TEST_CONTROLS: ${TEST_CONTROLS:-false}
       DATABASE_URL: postgresql://notificacao:notificacao@db-notificacao:5432/notificacao
       RABBITMQ_URL: amqp://clinica:clinica@rabbitmq:5672
@@ -145,6 +168,7 @@ services:
     depends_on:
       db-notificacao: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      cadastro-identidade: { condition: service_healthy }
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3002/saude"]
       interval: 5s

@@ -39,6 +39,8 @@ interface Props {
 
 export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, aoRemarcar, aoCancelar }: Props) {
   const cancelada = c.status === 'cancelada';
+  const encerrada = c.status === 'concluida' || c.status === 'falta';
+  const rotuloStatus = { agendada: 'Agendada', confirmada: 'Confirmada', concluida: 'Concluída', falta: 'Falta', cancelada: 'Cancelada' }[c.status];
   const desconhecido = situacaoDesconhecida(situacaoLembretes);
   const velho = situacaoVelha(situacaoLembretes);
   const pendencia = desconhecido ? null : pendenciaDoLembrete(c, lembrete);
@@ -65,7 +67,7 @@ export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, a
 
       <div className="consulta__lateral">
         <div className="consulta__selos">
-          <Selo tom={cancelada ? 'perigo' : 'info'}>{cancelada ? 'Cancelada' : 'Agendada'}</Selo>
+          <Selo tom={cancelada || c.status === 'falta' ? 'perigo' : c.status === 'concluida' || c.status === 'confirmada' ? 'sucesso' : 'info'}>{rotuloStatus}</Selo>
           {desconhecido && (
             <Selo tom="neutro">
               <CircleHelp size={13} aria-hidden="true" />
@@ -97,7 +99,7 @@ export function ItemConsulta({ consulta: c, lembrete, situacaoLembretes, acao, a
         )}
         {c.vinculoPacientePendente && <Selo tom="alerta">Vínculo com Cadastro pendente</Selo>}
         <EstadoAcao acao={acao} />
-        {!cancelada && (
+        {!cancelada && !encerrada && (
           <div className="consulta__acoes">
             <button className="acao" onClick={aoRemarcar} disabled={travado}>
               <RotateCcw size={16} aria-hidden="true" /> Remarcar

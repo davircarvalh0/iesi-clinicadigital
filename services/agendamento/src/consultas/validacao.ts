@@ -12,7 +12,8 @@ const telefone = z.string('Informe o telefone.').transform(soDigitos)
   .refine((v) => /^(?:55)?[1-9]\d{9,10}$/.test(v), 'Telefone inválido. Informe DDD e número.');
 
 const inicio = z.iso.datetime({ offset: true, error: 'Data e hora inválidas. Use o formato ISO 8601 com fuso.' })
-  .transform((v) => new Date(v));
+  .transform((v) => new Date(v))
+  .refine((v) => v.getTime() > Date.now(), 'A consulta deve começar no futuro.');
 
 export const esquemaNovaConsulta = z.object({
   idPaciente: z.uuid('Identificador do paciente inválido.').optional(),

@@ -32,7 +32,7 @@ export function extrairRespostas(corpo: unknown): RespostaRecebida[] {
           : undefined;
         if (typeof m.id !== 'string' || typeof m.from !== 'string' || typeof texto !== 'string') continue;
         const segundos = Number(m.timestamp);
-        respostas.push({ idMensagem: m.id, telefone: m.from, texto, recebidaEm: Number.isFinite(segundos) ? new Date(segundos * 1000) : new Date() });
+        respostas.push({ idMensagem: m.id, idMensagemOriginal: typeof m.context?.id === 'string' ? m.context.id : undefined, telefone: m.from, texto, recebidaEm: Number.isFinite(segundos) ? new Date(segundos * 1000) : new Date() });
       }
     }
   }
@@ -61,5 +61,5 @@ rotasWebhookWhatsapp.post('/webhook', async (req: Request & { corpoBruto?: Buffe
 export const rotasDemoWhatsapp = Router();
 rotasDemoWhatsapp.post('/whatsapp/resposta', async (req, res) => {
   const dados = z.object({ telefone: z.string().regex(/^\+?\d{10,13}$/), texto: z.string().min(1).max(200), idMensagem: z.string().min(1).max(200).optional() }).strict().parse(req.body);
-  res.json(await receberResposta({ idMensagem: dados.idMensagem ?? `demo-${randomUUID()}`, telefone: dados.telefone, texto: dados.texto, recebidaEm: new Date() }));
+  res.json(await receberResposta({ idMensagem: dados.idMensagem ?? `demo-${randomUUID()}`, telefone: dados.telefone, texto: dados.texto, recebidaEm: new Date(), simulado: true }));
 });

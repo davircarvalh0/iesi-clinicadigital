@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verificarAcesso } from '@clinica/eventos';
 import { tokenTeste } from '../../../packages/eventos/test/http-autenticado';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -12,7 +13,7 @@ before(async () => {
   delete process.env.TEST_CONTROLS;
   const { criarApp } = await import('../src/app');
   await new Promise<void>((resolve) => {
-    servidor = criarApp().listen(0, () => {
+    servidor = criarApp(verificarAcesso).listen(0, () => {
       base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
       resolve();
     });

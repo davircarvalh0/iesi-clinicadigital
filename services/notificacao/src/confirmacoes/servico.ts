@@ -19,6 +19,8 @@ export function ehConfirmacao(texto: string): boolean {
 export interface RespostaRecebida {
   /** Id da mensagem no provedor (wamid): torna o webhook idempotente quando a Meta reenvia. */
   idMensagem: string;
+  idMensagemOriginal?: string;
+  simulado?: boolean;
   /** Telefone de quem respondeu, como o provedor informa (ex.: 5581900000001). Não é gravado. */
   telefone: string;
   texto: string;
@@ -35,25 +37,32 @@ export async function receberResposta(r: RespostaRecebida) {
     if (repetida) return { resultado: repetida.resultado, idConsulta: repetida.idConsulta, duplicada: true };
 
     const internacional = paraFormatoInternacional(r.telefone);
-    const lembrete = await tx.lembrete.findFirst({
+    const lembrete = !r.idMensagemOriginal && !r.simulado ? null : await tx.lembrete.findFirst({
       where: {
         telefone: { in: [internacional, internacional.slice(2)] },
         status: { in: [...SITUACOES_RESPONDIVEIS] },
         inicioConsulta: { gt: r.recebidaEm },
         consultaCanceladaEm: null,
+        ...(r.idMensagemOriginal ? { idExterno: r.idMensagemOriginal, status: 'aceito_provedor' as const } : {}),
       },
       orderBy: { inicioConsulta: 'asc' },
-      select: { idConsulta: true },
+      select: { id: true, idConsulta: true, sequenciaAplicada: true },
     });
+    const tentativa = lembrete ? await tx.tentativaEnvio.findFirst({
+      where: { idLembrete: lembrete.id,
+        ...(r.idMensagemOriginal ? { idExterno: r.idMensagemOriginal, resultado: 'aceito_provedor' as const } : { resultado: 'simulado' as const }) },
+      orderBy: { iniciadaEm: 'desc' },
+      select: { sequenciaConsulta: true },
+    }) : null;
 
     let resultado: 'confirmada' | 'nao_reconhecida' | 'sem_consulta';
-    if (!lembrete) resultado = 'sem_consulta';
+    if (!lembrete || tentativa?.sequenciaConsulta == null || tentativa.sequenciaConsulta !== lembrete.sequenciaAplicada) resultado = 'sem_consulta';
     else if (!ehConfirmacao(r.texto)) resultado = 'nao_reconhecida';
     else resultado = 'confirmada';
 
     await tx.respostaWhatsapp.create({ data: { idMensagem: r.idMensagem, idConsulta: lembrete?.idConsulta ?? null, resultado, recebidaEm: r.recebidaEm } });
     if (resultado === 'confirmada') {
-      await publicarConfirmacao(tx, lembrete!.idConsulta, r.recebidaEm);
+      await publicarConfirmacao(tx, lembrete!.idConsulta, r.recebidaEm, tentativa!.sequenciaConsulta!);
       await registrarAtividade({ acao: 'lembrete.confirmado', descricao: 'Paciente confirmou presença pelo WhatsApp', idConsulta: lembrete!.idConsulta }, tx);
     } else {
       // Sem texto nem telefone na descrição (LGPD).
@@ -64,10 +73,10 @@ export async function receberResposta(r: RespostaRecebida) {
   });
 }
 
-async function publicarConfirmacao(tx: Prisma.TransactionClient, idConsulta: string, recebidaEm: Date) {
+async function publicarConfirmacao(tx: Prisma.TransactionClient, idConsulta: string, recebidaEm: Date, sequencia: number) {
   const evento = criarEnvelope<'consulta.confirmada', PayloadConsultaConfirmada>({
     tipo: 'consulta.confirmada', origem: 'notificacao', id_correlacao: idCorrelacaoConsulta(idConsulta),
-    payload: { id_consulta: idConsulta, canal: 'whatsapp', confirmada_em: isoRecife(recebidaEm) },
+    payload: { id_consulta: idConsulta, canal: 'whatsapp', confirmada_em: isoRecife(recebidaEm), sequencia },
   });
   await tx.eventoSaida.create({ data: { idEvento: evento.id_evento, tipo: evento.tipo, envelope: evento as unknown as Prisma.InputJsonValue } });
 }

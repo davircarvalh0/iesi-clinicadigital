@@ -19,16 +19,21 @@ const SITUACOES_QUE_OCUPAM = ['agendada', 'confirmada', 'concluida', 'falta'] as
  * A trava por profissional (pg_advisory_xact_lock) serializa agendamentos e remarcações simultâneos
  * até o fim da transação, então dois pedidos para o mesmo horário não passam juntos.
  */
-export async function garantirHorarioLivre(tx: Prisma.TransactionClient, profissionalId: string, inicio: Date, duracaoMinutos: number, ignorarId = '') {
+export async function bloquearPaciente(tx: Prisma.TransactionClient, cpf: string) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(1, hashtext(${cpf}))`;
+}
+
+export async function garantirHorarioLivre(tx: Prisma.TransactionClient, profissionalId: string, inicio: Date, duracaoMinutos: number, ignorarId = '', cpf: string) {
+  await bloquearPaciente(tx, cpf);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${profissionalId}))`;
   const fim = new Date(inicio.getTime() + duracaoMinutos * 60_000);
   const conflito = await tx.$queryRaw<{ id: string }[]>`
     SELECT id FROM consultas
-    WHERE profissional_id = ${profissionalId} AND id <> ${ignorarId}
+    WHERE (profissional_id = ${profissionalId} OR paciente_cpf = ${cpf}) AND id <> ${ignorarId}
       AND status::text = ANY(${[...SITUACOES_QUE_OCUPAM]})
       AND inicio < ${fim} AND inicio + make_interval(mins => duracao_minutos) > ${inicio}
     LIMIT 1`;
-  if (conflito.length) throw new ErroHttp(409, 'Horário indisponível: o profissional já tem consulta nesse horário.');
+  if (conflito.length) throw new ErroHttp(409, 'Horário indisponível: profissional ou paciente já tem consulta nesse horário.');
 }
 
 export function agendar(dados: NovaConsulta): Promise<Consulta> {
@@ -36,7 +41,7 @@ export function agendar(dados: NovaConsulta): Promise<Consulta> {
     const profissional = await tx.profissional.findUnique({ where: { nome: dados.profissional } });
     if (!profissional || profissional.especialidade !== dados.especialidade) throw new ErroHttp(400, 'Profissional ou especialidade inválidos.');
     if (!profissional.ativo) throw new ErroHttp(409, 'Profissional inativo: não recebe novas consultas.');
-    await garantirHorarioLivre(tx, profissional.id, dados.inicio, profissional.duracaoConsultaMinutos);
+    await garantirHorarioLivre(tx, profissional.id, dados.inicio, profissional.duracaoConsultaMinutos, '', dados.cpf);
     const consulta = await tx.consulta.create({
       data: {
         idPaciente: dados.idPaciente,
@@ -59,7 +64,7 @@ export function agendar(dados: NovaConsulta): Promise<Consulta> {
 export function remarcar(id: string, dados: Remarcacao): Promise<Consulta> {
   return prisma.$transaction(async (tx) => {
     const atual = await buscarAtiva(tx, id);
-    await garantirHorarioLivre(tx, atual.profissionalId, dados.inicio, atual.duracaoMinutos, atual.id);
+    await garantirHorarioLivre(tx, atual.profissionalId, dados.inicio, atual.duracaoMinutos, atual.id, atual.pacienteCpf);
     const consulta = await tx.consulta.update({
       where: { id },
       // A confirmação era para o horário antigo: volta a agendada (US-28).
@@ -101,8 +106,9 @@ export type NovaSituacao = 'confirmada' | 'concluida' | 'falta';
  * - agendada | confirmada → concluida | falta (a partir do início da consulta).
  * Confirmar de novo uma consulta confirmada não muda nada (idempotente: reenvio do WhatsApp, duplo clique).
  */
-export async function aplicarSituacao(tx: Prisma.TransactionClient, id: string, nova: NovaSituacao, origem: OrigemConfirmacao, agora = new Date()): Promise<Consulta> {
+export async function aplicarSituacao(tx: Prisma.TransactionClient, id: string, nova: NovaSituacao, origem: OrigemConfirmacao, agora = new Date(), sequenciaEsperada?: number): Promise<Consulta> {
   const atual = await buscarAtiva(tx, id);
+  if (origem === 'whatsapp' && (sequenciaEsperada === undefined || atual.sequencia !== sequenciaEsperada)) throw new ErroHttp(409, 'Confirmação referente a outra versão da consulta.');
   if (nova === 'confirmada') {
     if (atual.status === 'confirmada') return atual;
     if (atual.inicio <= agora) throw new ErroHttp(409, 'A consulta já começou: não dá mais para confirmar.');

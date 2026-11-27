@@ -43,4 +43,6 @@ test('US-30: contrato de consulta.confirmada', () => {
   assert.equal(validarConsultaConfirmada({ ...evento, origem: 'agendamento' }).ok, false);
   assert.equal(validarConsultaConfirmada({ ...evento, payload: { ...evento.payload, canal: 'sms' } }).ok, false);
   assert.equal(validarConsultaConfirmada({ ...evento, payload: { ...evento.payload, id_consulta: '' } }).ok, false);
+  assert.equal(validarConsultaConfirmada({ ...evento, payload: { ...evento.payload, sequencia: 0 } }).ok, false);
+  assert.equal(validarConsultaConfirmada({ ...evento, payload: { ...evento.payload, sequencia: 2 } }).ok, true);
 });

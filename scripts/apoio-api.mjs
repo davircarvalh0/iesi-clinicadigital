@@ -1,10 +1,27 @@
 // Apoio das suítes US-25 em diante: chamadas pela API real (gateway), login e cadastros fictícios.
 import assert from 'node:assert/strict';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 
 const projeto = process.env.COMPOSE_PROJECT_NAME;
 if (!projeto || projeto === 'iesi-clinicadigital' || process.env.TEST_CONTROLS !== 'true') throw new Error('Execute exclusivamente no Compose isolado de testes.');
 const base = process.env.TEST_BASE_URL ?? 'http://localhost:8080';
+
+// Fixture histórica exclusiva do Compose de testes: a API normal recusa datas passadas.
+export function ajustarInicioHistorico(id, inicio) {
+  assert.match(id, /^[0-9a-f-]{36}$/i);
+  const data = new Date(inicio).toISOString();
+  assert.ok(Date.parse(data) < Date.now());
+  execFileSync('docker', ['compose', '-p', projeto, 'exec', '-T', 'db-agendamento', 'psql', '-U', 'agendamento', '-d', 'agendamento', '-v', 'ON_ERROR_STOP=1', '-c', `UPDATE consultas SET inicio = '${data}' WHERE id = '${id}'`], { encoding: 'utf8' });
+}
+
+// Simula o aceite de uma mensagem pelo provedor sem enviar mensagens reais.
+export function registrarAceiteWhatsappFixture(idConsulta, idMensagem) {
+  assert.match(idConsulta, /^[0-9a-f-]{36}$/i);
+  assert.match(idMensagem, /^wamid\.[0-9a-f-]{36}$/i);
+  const sql = `BEGIN; UPDATE lembretes SET status = 'aceito_provedor', id_externo = '${idMensagem}' WHERE id_consulta = '${idConsulta}' AND status = 'simulado'; UPDATE tentativas_envio SET resultado = 'aceito_provedor', id_externo = '${idMensagem}' WHERE id_consulta = '${idConsulta}' AND resultado = 'simulado'; COMMIT;`;
+  execFileSync('docker', ['compose', '-p', projeto, 'exec', '-T', 'db-notificacao', 'psql', '-U', 'notificacao', '-d', 'notificacao', '-v', 'ON_ERROR_STOP=1', '-c', sql], { encoding: 'utf8' });
+}
 
 export async function api(rota, { token, body, method = body === undefined ? 'GET' : 'POST' } = {}) {
   const r = await fetch(`${base}/api/${rota}`, { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(15000) });

@@ -5,7 +5,7 @@ name: Verificação
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'fix/**']
   pull_request:
   workflow_dispatch:
 
@@ -46,7 +46,7 @@ jobs:
         run: npm run verificar -- --manter
       - name: Logs dos serviços
         if: always()
-        run: docker compose -p iesi-clinicadigital-verificacao --env-file .env.example logs --no-color > servicos.log 2>&1 || true
+        run: docker compose -p iesi-clinicadigital-verificacao --env-file .env.example logs --no-color 2>&1 | sed -E 's/(código )[A-Za-z0-9_-]+/\1[REDACTED]/g' > servicos.log
       - name: Relatório e logs
         if: always()
         uses: actions/upload-artifact@v4

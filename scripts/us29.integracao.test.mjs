@@ -1,7 +1,7 @@
 // US-29: indicadores do dashboard administrativo pela API real (Compose isolado de testes).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { api, cpfFicticio, criarConta, criarProfissional, entrarAdmin } from './apoio-api.mjs';
+import { api, cpfFicticio, criarConta, criarProfissional, entrarAdmin, ajustarInicioHistorico } from './apoio-api.mjs';
 
 // Um dia passado e isolado (ano sorteado no futuro distante não serve: concluída exige início no passado).
 const DIA = `2025-${String(1 + Math.floor(Math.random() * 12)).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 28)).padStart(2, '0')}`;
@@ -11,8 +11,8 @@ test('US-29: resumo e série refletem as situações das consultas do período',
   const admin = await entrarAdmin();
   const p = await criarProfissional(admin, 'Dra. Indicadores');
   const marcar = async (hhmm, cpf = cpfFicticio()) => {
-    const r = await api('agendamento/consultas', { token: admin, body: { nome: 'Paciente Fictício US29', cpf, telefone: '81900000290', profissional: p.nome, especialidade: p.especialidade, inicio: as(hhmm) } });
-    assert.equal(r.status, 201, JSON.stringify(r.dados)); return r.dados.id;
+    const r = await api('agendamento/consultas', { token: admin, body: { nome: 'Paciente Fictício US29', cpf, telefone: '81900000290', profissional: p.nome, especialidade: p.especialidade, inicio: new Date(Date.now() + 86400000).toISOString() } });
+    assert.equal(r.status, 201, JSON.stringify(r.dados)); ajustarInicioHistorico(r.dados.id, as(hhmm)); return r.dados.id;
   };
   const situacao = (id, status) => api(`agendamento/consultas/${id}/status`, { token: admin, method: 'PATCH', body: { status } });
   const antes = (await api(`agendamento/indicadores/resumo?de=${DIA}&ate=${DIA}`, { token: admin })).dados;

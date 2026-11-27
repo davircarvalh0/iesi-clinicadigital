@@ -1,11 +1,14 @@
 // US-28: estados da consulta (confirmada, concluida, falta) pela API real (Compose isolado de testes).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { api, as, cpfFicticio, criarConta, criarProfissional, entrarAdmin, segundaFutura } from './apoio-api.mjs';
+import { api, as, cpfFicticio, criarConta, criarProfissional, entrarAdmin, segundaFutura, ajustarInicioHistorico } from './apoio-api.mjs';
 
 async function marcar(token, p, inicio) {
-  const r = await api('agendamento/consultas', { token, body: { nome: 'Paciente Fictício US28', cpf: cpfFicticio(), telefone: '81900000280', profissional: p.nome, especialidade: p.especialidade, inicio } });
-  assert.equal(r.status, 201, JSON.stringify(r.dados)); return r.dados;
+  const historica = Date.parse(inicio) < Date.now();
+  const r = await api('agendamento/consultas', { token, body: { nome: 'Paciente Fictício US28', cpf: cpfFicticio(), telefone: '81900000280', profissional: p.nome, especialidade: p.especialidade, inicio: historica ? new Date(Date.now() + 86400000).toISOString() : inicio } });
+  assert.equal(r.status, 201, JSON.stringify(r.dados));
+  if (historica) ajustarInicioHistorico(r.dados.id, inicio);
+  return { ...r.dados, inicio };
 }
 const situacao = (token, id, status) => api(`agendamento/consultas/${id}/status`, { token, method: 'PATCH', body: { status } });
 
@@ -58,5 +61,5 @@ test('US-28: horário de consulta encerrada continua ocupado; o de cancelada é 
   const inicio = new Date(Date.now() - 3 * 3_600_000).toISOString();
   const c = await marcar(admin, p, inicio);
   assert.equal((await situacao(admin, c.id, 'concluida')).status, 200);
-  assert.equal((await api('agendamento/consultas', { token: admin, body: { nome: 'Paciente Fictício US28', cpf: cpfFicticio(), telefone: '81900000280', profissional: p.nome, especialidade: p.especialidade, inicio } })).status, 409);
+  assert.equal((await api('agendamento/consultas', { token: admin, body: { nome: 'Paciente Fictício US28', cpf: cpfFicticio(), telefone: '81900000280', profissional: p.nome, especialidade: p.especialidade, inicio } })).status, 400);
 });

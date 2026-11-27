@@ -22,7 +22,7 @@ rotasLembretes.get('/:idConsulta/trilha', async (req, res) => {
   res.json(await trilhaDoLembrete(esquemaIdConsulta.parse(req.params.idConsulta)));
 });
 
-// US-15: POST /lembretes/:idConsulta/resolucao  { acao: 'reenviar' | 'manter_sem_reenvio', solicitante }
+// US-15: POST /lembretes/:idConsulta/resolucao { acao }; solicitante vem da sessão.
 rotasLembretes.post('/:idConsulta/resolucao', async (req, res) => {
   res.status(201).json(await resolverEnvioIncerto(esquemaIdConsulta.parse(req.params.idConsulta), { acao: req.body?.acao, solicitante: res.locals.usuario.nome }, new Date(), res.locals.usuario.id));
 });

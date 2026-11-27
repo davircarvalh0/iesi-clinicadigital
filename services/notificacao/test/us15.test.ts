@@ -1,5 +1,6 @@
 // US-15: envio real controlado, resultado incerto e decisão humana registrada.
 import assert from 'node:assert/strict';
+import { verificarAcesso } from '@clinica/eventos';
 import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { Server } from 'node:http';
@@ -95,7 +96,7 @@ describe('US-15 com banco', { skip: !process.env.TEST_DATABASE_URL }, () => {
     rotina = await import('../src/envio/rotina-envio');
     await (await import('./apoio/autorizacao')).autorizarWhatsApp(prisma, CPF);
     const { criarApp } = await import('../src/app');
-    servidor = criarApp().listen(0, '127.0.0.1');
+    servidor = criarApp(verificarAcesso).listen(0, '127.0.0.1');
     await once(servidor, 'listening');
     base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
   });
@@ -227,7 +228,9 @@ describe('US-15 com banco', { skip: !process.env.TEST_DATABASE_URL }, () => {
     assert.equal(r.status, 201);
     assert.equal(r.corpo.lembrete.status, 'incerto', 'continua sem confirmação: não vira sucesso nem falha');
     assert.ok(r.corpo.lembrete.incertoResolvidoEm);
-    assert.match(r.corpo.lembrete.motivoFalha, /Mantido sem reenvio por Juliana/);
+    // A identidade é determinada pela sessão autenticada, não pelo corpo enviado.
+    assert.match(r.corpo.lembrete.motivoFalha, /Mantido sem reenvio por Administrador/);
+    assert.doesNotMatch(r.corpo.lembrete.motivoFalha, /Juliana/);
     assert.equal((await resolver(id, { acao: 'reenviar', solicitante: 'Juliana' })).status, 409);
   });
 

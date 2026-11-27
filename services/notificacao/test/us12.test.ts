@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { fetch } from '../../../packages/eventos/test/http-autenticado';
+import { verificarAcesso } from '@clinica/eventos';
+import { tokenTeste } from '../../../packages/eventos/test/http-autenticado';
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import { test } from 'node:test';
@@ -39,7 +40,7 @@ test('US-12: resultados persistidos e expostos pelo GET /lembretes', {
   await (await import('./apoio/autorizacao')).autorizarWhatsApp(prisma, '12345678909');
   const { iniciarRotinaEnvio } = await import('../src/envio/rotina-envio');
   const { programar, reprogramar } = await import('../src/lembretes/servico');
-  const servidor = criarApp().listen(0, '127.0.0.1');
+  const servidor = criarApp(verificarAcesso).listen(0, '127.0.0.1');
   await once(servidor, 'listening');
   const porta = (servidor.address() as AddressInfo).port;
   const consultarHttp = globalThis.fetch;
@@ -71,7 +72,9 @@ test('US-12: resultados persistidos e expostos pelo GET /lembretes', {
       });
       const canal = criarCanalEnvio({ canalEnvio: cenario.canalEnvio, whatsapp: { ...whatsapp, token: cenario.token } });
       const consultar = async () => {
-        const resposta = await consultarHttp(`http://127.0.0.1:${porta}/lembretes?consulta=${id}`);
+        const resposta = await consultarHttp(`http://127.0.0.1:${porta}/lembretes?consulta=${id}`, {
+          headers: { Authorization: `Bearer ${tokenTeste()}` },
+        });
         assert.equal(resposta.status, 200);
         const [lembrete] = await resposta.json();
         return lembrete;

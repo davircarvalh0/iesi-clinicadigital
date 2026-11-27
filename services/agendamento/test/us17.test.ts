@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verificarAcesso } from '@clinica/eventos';
 import { fetch } from '../../../packages/eventos/test/http-autenticado';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -8,7 +9,7 @@ import { esquemaNovaConsulta, esquemaRemarcacao } from '../src/consultas/validac
 
 const valida = {
   nome: 'Paciente Fictício US17', cpf: '000.123.456-78', telefone: '(81) 90000-0017',
-  profissional: 'Profissional Fictício', especialidade: 'Teste', inicio: '2026-12-01T10:00:00-03:00',
+  profissional: 'Profissional Fictício', especialidade: 'Teste', inicio: new Date(Date.now() + 86400000).toISOString(),
 };
 
 let base = '';
@@ -18,7 +19,7 @@ before(async () => {
   process.env.RABBITMQ_URL ??= 'amqp://teste:teste@localhost:5672';
   const { criarApp } = await import('../src/app');
   await new Promise<void>((resolve) => {
-    servidor = criarApp().listen(0, () => {
+    servidor = criarApp(verificarAcesso).listen(0, () => {
       base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
       resolve();
     });
@@ -36,6 +37,12 @@ test('CPF e telefone válidos são normalizados para dígitos', () => {
   assert.equal(consulta.cpf, '00012345678');
   assert.equal(consulta.telefone, '81900000017');
   assert.equal(esquemaNovaConsulta.parse({ ...valida, cpf: '00012345678', telefone: '5581900000017' }).telefone, '5581900000017');
+});
+
+test('agendamento e remarcação rejeitam datas passadas', () => {
+  const inicio = new Date(Date.now() - 60_000).toISOString();
+  assert.equal(esquemaNovaConsulta.safeParse({ ...valida, inicio }).success, false);
+  assert.equal(esquemaRemarcacao.safeParse({ inicio }).success, false);
 });
 
 test('CA1: CPF fora do formato, telefone inválido e data inválida são rejeitados', () => {
