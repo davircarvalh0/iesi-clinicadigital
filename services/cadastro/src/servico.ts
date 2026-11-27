@@ -39,7 +39,8 @@ async function situacaoAutorizacoes(db: Leitor, idPaciente: string) {
   });
 }
 
-async function enfileirar(tx: Prisma.TransactionClient, paciente: Paciente, correlacao: string) {
+/** Publica `paciente.atualizado` pela outbox (também usado ao abrir a conta do portal, US-27). */
+export async function enfileirar(tx: Prisma.TransactionClient, paciente: Paciente, correlacao: string) {
   const evento = criarEnvelope({
     tipo: 'paciente.atualizado', origem: 'cadastro', id_correlacao: correlacao,
     payload: {

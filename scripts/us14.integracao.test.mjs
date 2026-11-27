@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { after, before, test } from 'node:test';
@@ -54,7 +54,7 @@ const whatsapp = (lista) => lista.find((a) => a.canal === 'whatsapp');
 async function agendar(cpf, inicio, nome = 'Paciente Fictício US14') {
   const r = await api('agendamento/consultas', {
     method: 'POST',
-    body: { cpf, nome, telefone: '81900000140', profissional: 'Profissional Fictício', especialidade: 'Teste', inicio },
+    body: { cpf, nome, telefone: '81900000140', profissional: profissionalDeTeste(), especialidade: 'Teste', inicio },
   });
   assert.equal(r.status, 201);
   return r.dados.id;

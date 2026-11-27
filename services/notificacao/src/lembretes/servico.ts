@@ -138,7 +138,8 @@ export async function cancelar(tx: Prisma.TransactionClient, payload: PayloadCon
   if (existente && ENVIO_JA_TENTADO.has(existente.status)) {
     await tx.lembrete.update({
       where: { idConsulta: payload.id_consulta },
-      data: { sequenciaAplicada: proximaSequencia(existente, payload.sequencia) },
+      // US-30: o envio fica como está, mas uma resposta do paciente não confirma mais nada.
+      data: { sequenciaAplicada: proximaSequencia(existente, payload.sequencia), consultaCanceladaEm: new Date() },
     });
     await registrarAtividade(
       {

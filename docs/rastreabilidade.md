@@ -31,6 +31,12 @@ apontando para um banco de teste com as migrações aplicadas. `npm run verifica
 | US-22 Validação humana | [US-22](US-22.md) | — | — | **Material pronto; sessão pendente** (IM-02) |
 | US-23 Documentação | [US-23](US-23.md) | — | — | **Implementada nesta entrega** |
 | US-24 Defesa | [US-24](US-24.md) | — | `npm run demo:ensaio` | **Roteiro e ensaio prontos; ensaio humano pendente** |
+| US-25 Sessões, senha e funcionários | [US-25](US-25.md) | `packages/eventos/test/acesso.test.mjs` | `test:us25` | Implementada, aguardando revisão |
+| US-26 Profissionais e disponibilidade | [US-26](US-26.md) | `agendamento/test/us26.test.ts` | `test:us26` | Implementada, aguardando revisão |
+| US-27 Portal do paciente | [US-27](US-27.md) | — | `test:us27` | Implementada, aguardando revisão |
+| US-28 Estados da consulta | [US-28](US-28.md) | — | `test:us28` | Implementada, aguardando revisão |
+| US-29 Indicadores | [US-29](US-29.md) | — | `test:us29` | Implementada, aguardando revisão |
+| US-30 Confirmação pelo WhatsApp | [US-30](US-30.md) | `notificacao/test/us30.test.ts` | `test:us30` | Implementada (simulado); envio real pendente (IM-04) |
 
 ## Base encontrada no código (BL)
 

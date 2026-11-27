@@ -22,6 +22,7 @@ Um evento inválido é recusado antes do processamento e vai para a fila de erro
 | `consulta.cancelada` | Agendamento | idem | Notificação | US-11 |
 | `paciente.atualizado` | Cadastro | `id_paciente`, `cpf`, `nome`, `telefone`, `email`, `revisao` | Agendamento (`agendamento.pacientes`), Notificação | US-01 a US-03 |
 | `paciente.autorizacao_alterada` | Cadastro | `id_paciente`, `cpf`, `canal`, `situacao`, `origem_registro`, `registrado_em`, `versao` | Notificação | US-14 |
+| `consulta.confirmada` | Notificação | `id_consulta`, `canal: "whatsapp"`, `confirmada_em` (sem telefone nem texto) | Agendamento (`agendamento.pacientes`); a Notificação ignora o próprio | US-30 |
 
 - `sequencia` é aditivo (US-11). Um evento sem esse campo é aplicado sem checagem de ordem.
 - `revisao` (paciente) e `versao` (autorização) só substituem a projeção local quando são maiores que a guardada.
@@ -38,6 +39,19 @@ Um evento inválido é recusado antes do processamento e vai para a fila de erro
 | `PATCH /consultas/:id` | `{ inicio }` → `200`; incrementa `sequencia` e publica `consulta.reagendada` | BL-05, US-11 |
 | `DELETE /consultas/:id` | `200`; `409` se já estiver cancelada; `404` se não existir | BL-05, US-18 |
 | `GET /eventos?limite=` | Eventos da outbox para o painel da recepção (sem CPF nem telefone) | US-16, US-17 |
+| `GET /consultas/:id` | Detalhe; profissional e paciente só as próprias (as demais `404`); o paciente recebe a versão reduzida | US-29 |
+| `PATCH /consultas/:id/status` | `{ status: confirmada \| concluida \| falta }`; equipe, ou o profissional da consulta (exceto confirmar); `409` fora da transição | US-28 |
+| `GET /consultas/horarios-disponiveis?profissionalId=&data=&dias=` | Grade livre (até 14 dias), sem ocupados nem passados; equipe e paciente | US-26 |
+| `POST /consultas/solicitar` | Paciente: `{ profissionalId, inicio }` → `201`; só na grade, até 3 futuras; `409` em conflito | US-27 |
+| `PATCH /consultas/:id/confirmar` | Paciente confirma a própria (idempotente) | US-27 |
+| `GET /pacientes/minha-conta/consultas` | Consultas do paciente logado | US-27 |
+| `GET /profissionais` · `POST /profissionais` | Lista (paciente: só ativos, campos reduzidos) e cadastro (administrador) | US-26 |
+| `GET /profissionais/:id` · `PATCH /profissionais/:id` · `PATCH /profissionais/:id/status` | Detalhe (equipe ou o próprio), edição e `{ ativo }` (administrador) | US-26 |
+| `GET /profissionais/:id/disponibilidade` · `PUT …/disponibilidade` | `{ duracaoConsultaMinutos?, intervalos: [{ diaSemana 0–6, inicio "HH:MM", fim }] }`; o PUT substitui a semana (administrador) | US-26 |
+| `GET /indicadores/resumo?de=&ate=` · `GET /indicadores/consultas?de=&ate=` | Indicadores do período (padrão: mês corrente), só administrador | US-29 |
+
+`POST /consultas` e `PATCH /consultas/:id` respondem `409` quando o horário se sobrepõe a outra consulta do mesmo
+profissional ou o profissional está inativo (US-26). Remarcar uma consulta confirmada a devolve para `agendada` (US-28).
 | `POST /demo/reenviar-ultimo-evento` | Republica o último `id_evento` (demonstração de duplicação) | BL-03 |
 
 Uma entrada inválida responde `400 { erro }` com o motivo (US-17).
@@ -52,6 +66,22 @@ Uma entrada inválida responde `400 { erro }` com o motivo (US-17).
 | `PATCH /pacientes/:id` | Edição parcial com `revisao`; publica `paciente.atualizado` | US-02, US-03 |
 | `GET /pacientes/:id/autorizacoes` | `{ historico }`, do mais recente para o mais antigo | US-14 |
 | `POST /pacientes/:id/autorizacoes` | `{ canal, situacao, origem }` → `201`; `409` em registro simultâneo; publica `paciente.autorizacao_alterada` | US-14 |
+
+Usuários (`/usuarios`). Sem login: `login`, `recuperar-senha`, `redefinir-senha`. Com sessão: `logout`, `minha-conta/*`.
+O restante é só do administrador.
+
+| Método e rota | Contrato | Histórias |
+| --- | --- | --- |
+| `POST /usuarios/login` | `{ email, senha }` → `{ usuario, token, expiraEm }`; abre uma sessão de 30 min; `403` com a conta desativada | US-25 |
+| `POST /usuarios/logout` | Encerra a sessão do token → `204` | US-25 |
+| `PATCH /usuarios/minha-conta/senha` | `{ senhaAtual, novaSenha }` → `204`; derruba as outras sessões | US-25 |
+| `POST /usuarios/recuperar-senha` | `{ email }` → sempre `202`, com ou sem conta; código no log (envio simulado) | US-25 |
+| `POST /usuarios/redefinir-senha` | `{ codigo, novaSenha }` → `204`; `400` com código inválido, expirado ou já usado | US-25 |
+| `PATCH /usuarios/minha-conta` | `{ nome?, email?, telefone? }`; no paciente, nome e telefone atualizam o mestre e publicam `paciente.atualizado` | US-27 |
+| `GET /usuarios` · `POST /usuarios` | Lista (administrador) e cria contas. A recepção cria só conta `paciente`, com `pacienteId` do mestre (uma por paciente) | Acesso, US-27 |
+| `GET /usuarios/:id` | Conta sem a senha, com `ativo` | US-25 |
+| `PATCH /usuarios/:id` | Parcial: `{ nome, email, perfil, profissionalId }`; `409` com e-mail repetido ou sem outro administrador ativo | US-25 |
+| `PATCH /usuarios/:id/status` | `{ ativo }`; desativar encerra as sessões; `409` na própria conta ou no último administrador | US-25 |
 
 ## Notificação (`:3002`, `/api/notificacao`)
 

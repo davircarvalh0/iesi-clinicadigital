@@ -25,3 +25,10 @@ test('profissional deve ter vínculo com seu cadastro e token tem validade', (t)
   assert.equal(verificarAcesso(`Bearer ${token}`), null);
   assert.throws(() => { delete process.env.AUTH_SECRET; emitirAcesso(usuario); });
 });
+
+test('US-25: o token do login carrega a sessão; sem sessão, a identidade continua igual', () => {
+  process.env.AUTH_SECRET = randomBytes(32).toString('hex');
+  const usuario = { id: 'u3', nome: 'Recepção', perfil: 'recepcionista', profissionalId: null };
+  assert.deepEqual(verificarAcesso(`Bearer ${emitirAcesso(usuario, 's1')}`), { ...usuario, sessaoId: 's1' });
+  assert.deepEqual(verificarAcesso(`Bearer ${emitirAcesso(usuario)}`), usuario);
+});

@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -56,7 +56,7 @@ const buscarConsulta = async (id) => {
 async function agendar(cpf, paciente) {
   const resposta = await api('agendamento/consultas', {
     cpf, nome: paciente?.nome ?? 'Paciente Fictício US08', telefone: paciente?.telefone ?? '81900000008',
-    idPaciente: paciente?.id, profissional: 'Profissional Fictício', especialidade: 'Teste',
+    idPaciente: paciente?.id, profissional: profissionalDeTeste(), especialidade: 'Teste',
     inicio: new Date(Date.now() + 7 * 86400000).toISOString(),
   });
   assert.equal(resposta.status, 201);

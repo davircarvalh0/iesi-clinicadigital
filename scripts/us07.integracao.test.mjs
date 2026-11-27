@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
@@ -40,11 +40,11 @@ test('US-07: mestre real, busca, edição, concorrência, eventos e idempotênci
   let paciente, consulta;
   try {
     await t.test('CA1/CA3: duas consultas geram um único paciente; total vem do mestre', async () => {
-      const dados = { nome, cpf, telefone: '81900000001', profissional: 'Profissional Fictício', especialidade: 'Teste',
+      const dados = { nome, cpf, telefone: '81900000001', profissional: profissionalDeTeste(), especialidade: 'Teste',
         inicio: new Date(Date.now() + 7 * 86400000).toISOString() };
       consulta = await api('agendamento/consultas', dados);
       assert.equal(consulta.status, 201);
-      assert.equal((await api('agendamento/consultas', dados)).status, 201);
+      assert.equal((await api('agendamento/consultas', { ...dados, profissional: profissionalDeTeste() })).status, 201);
       const resultado = await aguardar(lista, (d) => d.totalFiltrado === 1, 'criação do mestre');
       paciente = resultado.pacientes[0];
       assert.equal(resultado.pacientes.length, 1);
@@ -79,7 +79,7 @@ test('US-07: mestre real, busca, edição, concorrência, eventos e idempotênci
       await publicar(evento);
       await publicar({ ...evento, id_evento: randomUUID(), payload: { ...evento.payload, revisao: 1, telefone: '81900000001' } });
       // Uma nova consulta com contato antigo não desfaz a correção no mestre nem nos lembretes.
-      const nova = await api('agendamento/consultas', { nome, cpf, telefone: '81900000001', profissional: 'Profissional Fictício', especialidade: 'Teste', inicio: new Date(Date.now() + 8 * 86400000).toISOString() });
+      const nova = await api('agendamento/consultas', { nome, cpf, telefone: '81900000001', profissional: profissionalDeTeste(), especialidade: 'Teste', inicio: new Date(Date.now() + 8 * 86400000).toISOString() });
       assert.equal(nova.status, 201);
       await aguardar(lembretes, (ls) => ls.filter((l) => l.pacienteCpf === cpf).length === 3 && ls.filter((l) => l.pacienteCpf === cpf).every((l) => l.telefone === paciente.telefone), 'contato mestre na nova consulta');
       const atualizado = await lista();
@@ -87,7 +87,7 @@ test('US-07: mestre real, busca, edição, concorrência, eventos e idempotênci
       assert.equal(atualizado.pacientes[0].telefone, paciente.telefone);
       const eventoConsulta = { id_evento: randomUUID(), tipo: 'consulta.agendada', versao: 1, origem: 'agendamento',
         ocorrido_em: new Date().toISOString(), id_correlacao: `consulta-${consulta.dados.id}`,
-        payload: { id_consulta: consulta.dados.id, paciente: { cpf, nome, telefone: '81900000001' }, profissional: 'Profissional Fictício', especialidade: 'Teste', inicio: consulta.dados.inicio } };
+        payload: { id_consulta: consulta.dados.id, paciente: { cpf, nome, telefone: '81900000001' }, profissional: profissionalDeTeste(), especialidade: 'Teste', inicio: consulta.dados.inicio } };
       await publicar(eventoConsulta); await publicar(eventoConsulta);
       const barreira = `barreira-${randomUUID()}`;
       await publicar({ ...eventoConsulta, id_evento: randomUUID(), id_correlacao: barreira });

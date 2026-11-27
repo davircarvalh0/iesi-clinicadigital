@@ -101,6 +101,14 @@
       "arguments": {}
     },
     {
+      "source": "clinica.eventos",
+      "vhost": "/",
+      "destination": "agendamento.pacientes",
+      "destination_type": "queue",
+      "routing_key": "consulta.confirmada",
+      "arguments": {}
+    },
+    {
       "source": "clinica.eventos.erros",
       "vhost": "/",
       "destination": "agendamento.pacientes.erros",

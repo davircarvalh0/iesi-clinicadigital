@@ -6,6 +6,7 @@ export const VERSOES_SUPORTADAS: Readonly<Record<string, readonly number[]>> = {
   'consulta.cancelada': [1],
   'paciente.atualizado': [1],
   'paciente.autorizacao_alterada': [1],
+  'consulta.confirmada': [1],
 };
 
 type Objeto = Record<string, unknown>;

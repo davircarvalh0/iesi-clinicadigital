@@ -26,3 +26,10 @@ export async function fetch(url, opcoes = {}) {
   }
   return globalThis.fetch(url, { ...opcoes, headers });
 }
+
+/**
+ * US-26: a agenda recusa consultas sobrepostas do mesmo profissional. Cada consulta de teste usa um
+ * profissional fictício próprio para que as suítes não dependam umas das outras (o cadastro mestre
+ * é providenciado acima, só no runner isolado).
+ */
+export const profissionalDeTeste = (prefixo = 'Profissional Fictício') => `${prefixo} ${globalThis.crypto.randomUUID().slice(0, 8)}`;

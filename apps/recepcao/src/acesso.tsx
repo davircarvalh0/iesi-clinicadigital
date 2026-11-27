@@ -4,17 +4,19 @@ import { agendamentoApi } from './api/agendamento';
 import { usePolling } from './hooks/usePolling';
 import { dataHora } from './formatacao';
 
-export type Perfil = 'administrador' | 'recepcionista' | 'profissional';
-export interface Usuario { id: string; nome: string; perfil: Perfil; profissionalId: string | null }
-export interface Profissional { id: string; nome: string; especialidade: string }
+export type Perfil = 'administrador' | 'recepcionista' | 'profissional' | 'paciente';
+export interface Usuario { id: string; nome: string; perfil: Perfil; profissionalId: string | null; pacienteId?: string | null }
+export interface Profissional { id: string; nome: string; especialidade: string; ativo?: boolean; duracaoConsultaMinutos?: number }
 export function Acesso({ renderizar }: { renderizar: (usuario: Usuario, sair: () => void) => React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
-  const sair = () => { definirToken(null); setUsuario(null); setSenha(''); };
-  useEffect(() => { window.addEventListener('sessao-expirada', sair); return () => window.removeEventListener('sessao-expirada', sair); }, []);
+  const limpar = () => { definirToken(null); setUsuario(null); setSenha(''); };
+  // Encerra a sessão no Cadastro (US-25); a tela sai mesmo se o serviço não responder.
+  const sair = () => { requisitar('/api/cadastro/usuarios/logout', { method: 'POST' }).catch(() => {}); limpar(); };
+  useEffect(() => { window.addEventListener('sessao-expirada', limpar); return () => window.removeEventListener('sessao-expirada', limpar); }, []);
   async function entrar(e: FormEvent) {
     e.preventDefault(); setErro(''); setCarregando(true);
     try {

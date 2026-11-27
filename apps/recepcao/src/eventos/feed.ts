@@ -31,6 +31,8 @@ const ATIVIDADES: Record<string, { titulo: string; tom: TomSelo }> = {
   'lembrete.incerto': { titulo: 'Envio sem confirmação', tom: 'alerta' },
   'lembrete.reenvio_solicitado': { titulo: 'Reenvio solicitado pela recepção', tom: 'marca' },
   'lembrete.mantido_sem_reenvio': { titulo: 'Mantido sem reenvio pela recepção', tom: 'neutro' },
+  'lembrete.confirmado': { titulo: 'Paciente confirmou pelo WhatsApp', tom: 'sucesso' },
+  'lembrete.resposta_ignorada': { titulo: 'Resposta do paciente sem efeito', tom: 'neutro' },
   'envio.retomado': { titulo: 'Envio simulado retomado', tom: 'neutro' },
   'lembrete.liberado': { titulo: 'Lembrete liberado', tom: 'marca' },
   'autorizacao.atualizada': { titulo: 'Autorização de contato atualizada', tom: 'info' },

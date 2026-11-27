@@ -1,5 +1,6 @@
 import { idCorrelacaoConsulta, type PacienteAtualizado } from '@clinica/eventos';
 import { prisma } from '../db';
+import { SITUACOES_ATIVAS } from './servico';
 
 const PREFIXO_CONSULTA = idCorrelacaoConsulta('');
 
@@ -23,11 +24,15 @@ export async function aplicarPacienteAtualizado(evento: PacienteAtualizado): Pro
       });
     }
 
+    // US-27: cópia do contato para as solicitações do portal; a revisão impede regressão.
+    await tx.pacienteContato.createMany({ data: { id: id_paciente, cpf, nome, telefone, revisao }, skipDuplicates: true });
+    await tx.pacienteContato.updateMany({ where: { id: id_paciente, revisao: { lt: revisao } }, data: { nome, telefone, revisao } });
+
     // O CPF é imutável no Cadastro, por isso serve de chave mesmo antes do vínculo.
     await tx.consulta.updateMany({
       where: {
         pacienteCpf: cpf,
-        status: 'agendada',
+        status: { in: [...SITUACOES_ATIVAS] },
         OR: [{ pacienteRevisao: null }, { pacienteRevisao: { lt: revisao } }],
       },
       data: { pacienteNome: nome, pacienteTelefone: telefone, pacienteRevisao: revisao },

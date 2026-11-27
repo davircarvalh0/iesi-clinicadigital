@@ -73,7 +73,7 @@ export function App({ usuario, sair }: { usuario: Usuario; sair: () => void }) {
     : listaConsultas.filter((c) => pendenciaDoLembrete(c, lembretePorConsulta.get(c.id))).length;
 
   const consultasHoje = listaConsultas.filter(
-    (c) => c.status === 'agendada' && chaveDia(new Date(c.inicio)) === chaveDia(new Date()),
+    (c) => (c.status === 'agendada' || c.status === 'confirmada') && chaveDia(new Date(c.inicio)) === chaveDia(new Date()),
   ).length;
 
   const atualizar = () =>

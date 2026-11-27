@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { before, test } from 'node:test';
@@ -46,7 +46,7 @@ async function agendar() {
     method: 'POST',
     body: {
       nome: 'Paciente Fictício US11', cpf: cpfFicticio(), telefone: '81900000111',
-      profissional: 'Profissional Fictício', especialidade: 'Teste',
+      profissional: profissionalDeTeste(), especialidade: 'Teste',
       inicio: new Date(Date.now() + 2 * 86400000).toISOString(),
     },
   });

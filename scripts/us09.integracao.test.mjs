@@ -1,6 +1,6 @@
 // US-09 ponta a ponta: consultas criadas pela API viram lembretes na listagem dedicada da recepção.
 // Uso: Compose ativo (CANAL_ENVIO=log); TEST_BASE_URL aponta o gateway (padrão http://localhost:8080).
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { before, test } from 'node:test';
@@ -30,12 +30,13 @@ async function aguardar(carregar, condicao, descricao) {
 }
 
 // Dia distante (40 dias) em Recife: o lembrete fica programado e não é enviado durante o teste.
+const PROFISSIONAL = profissionalDeTeste('Dra. Exemplo');
 const DIA = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Recife' }).format(new Date(Date.now() + 40 * 86_400_000));
 
 async function agendar(hora) {
   const r = await api('agendamento/consultas', {
     method: 'POST',
-    body: { nome: 'Paciente Exemplo Nove', cpf: CPF, telefone: TELEFONE, profissional: 'Dra. Exemplo', especialidade: 'Teste', inicio: `${DIA}T${hora}:00-03:00` },
+    body: { nome: 'Paciente Exemplo Nove', cpf: CPF, telefone: TELEFONE, profissional: PROFISSIONAL, especialidade: 'Teste', inicio: `${DIA}T${hora}:00-03:00` },
   });
   assert.equal(r.status, 201);
   return r.dados.id;
@@ -64,7 +65,7 @@ test('US-09 CA1 e CA2: a listagem traz os lembretes do período, filtra por situ
 
   const doTeste = programados.itens.find((l) => l.idConsulta === manha);
   assert.equal(doTeste.pacienteNome, 'Paciente Exemplo Nove');
-  assert.equal(doTeste.profissional, 'Dra. Exemplo');
+  assert.equal(doTeste.profissional, PROFISSIONAL);
   assert.equal(new Date(doTeste.inicioConsulta).toISOString(), new Date(`${DIA}T09:00:00-03:00`).toISOString());
   const texto = JSON.stringify(programados);
   assert.ok(!texto.includes(CPF) && !texto.includes(TELEFONE), 'painel sem CPF nem telefone');

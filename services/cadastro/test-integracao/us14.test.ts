@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fetch } from '../../../packages/eventos/test/http-autenticado';
+import { fetch } from './apoio';
 import { randomInt, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { test } from 'node:test';

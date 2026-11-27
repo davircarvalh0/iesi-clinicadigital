@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -61,7 +61,7 @@ function consultaFicticia() {
     payload: {
       id_consulta: id,
       paciente: { cpf: CPF, nome: NOME, telefone: TELEFONE },
-      profissional: 'Profissional Fictício',
+      profissional: profissionalDeTeste(),
       especialidade: 'Teste',
       inicio: new Date(Date.now() + 7 * 86400000).toISOString(),
     },

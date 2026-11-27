@@ -44,7 +44,7 @@ export function ModalConsulta({ modo, aoFechar, aoSalvar }: Props) {
   useEffect(() => {
     if (remarcando) return;
     const controle = new AbortController();
-    requisitar<Profissional[]>('/api/agendamento/profissionais', { signal: controle.signal }).then(setProfissionais).catch(() => { if (!controle.signal.aborted) setErro('Não foi possível carregar os profissionais.'); });
+    requisitar<Profissional[]>('/api/agendamento/profissionais', { signal: controle.signal }).then((lista) => setProfissionais(lista.filter((p) => p.ativo !== false))).catch(() => { if (!controle.signal.aborted) setErro('Não foi possível carregar os profissionais.'); });
     return () => controle.abort();
   }, [remarcando]);
   const [erro, setErro] = useState<string | null>(null);
