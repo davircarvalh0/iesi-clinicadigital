@@ -11,6 +11,7 @@ export interface Usuario {
 
 export interface UsuarioListado extends Usuario {
   email: string;
+  ativo: boolean;
 }
 
 export interface Profissional {

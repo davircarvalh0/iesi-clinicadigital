@@ -9,6 +9,7 @@ import { juntarOcorrencias } from '../src/dominio/eventos';
 import { desconhecido, frescorDe, velho } from '../src/dominio/frescor';
 import { pendenciaDe } from '../src/dominio/lembretes';
 import { conferir, MARGEM_CONFERENCIA_MS, resultadoDaFalha } from '../src/telas/agenda/cancelamentos';
+import { conferirSituacao, resultadoDaFalhaSituacao } from '../src/telas/agenda/situacao';
 import { passosDaTrilha } from '../src/telas/lembretes/GavetaTrilha';
 import { intervalo } from '../src/telas/lembretes/TelaLembretes';
 
@@ -79,6 +80,25 @@ describe('cancelamento com falha (US-18)', () => {
     const estado = { fase: 'incerto' as const, em: 1000 };
     assert.equal(conferir(estado, consulta(), 1000 + MARGEM_CONFERENCIA_MS - 1).fase, 'incerto');
     assert.equal(conferir(estado, consulta(), 1000 + MARGEM_CONFERENCIA_MS + 1).fase, 'recusado');
+  });
+});
+
+describe('mudança de situação com falha (US-28)', () => {
+  it('sem resposta é incerto; erro com resposta é recusado', () => {
+    assert.equal(resultadoDaFalhaSituacao(new TypeError('Failed to fetch'), 'concluida').fase, 'incerto');
+    assert.equal(resultadoDaFalhaSituacao(new ErroApi(504, 'x'), 'concluida').fase, 'incerto');
+    assert.equal(resultadoDaFalhaSituacao(new ErroApi(409, 'Consulta já começou.'), 'confirmada').fase, 'recusado');
+  });
+  it('incerto vira confirmado quando a agenda lida depois mostra a situação pedida', () => {
+    const estado = { fase: 'incerto' as const, em: 1000, alvo: 'concluida' as const };
+    assert.equal(conferirSituacao(estado, consulta({ status: 'concluida' }), 1500).fase, 'confirmado');
+    assert.equal(conferirSituacao(estado, consulta({ status: 'concluida' }), 900).fase, 'incerto', 'leitura anterior à falha não vale');
+    assert.equal(conferirSituacao(estado, consulta({ status: 'falta' }), 1500).fase, 'incerto', 'situação diferente da pedida não confirma');
+  });
+  it('incerto vira recusado só depois da margem, se a situação não mudou', () => {
+    const estado = { fase: 'incerto' as const, em: 1000, alvo: 'concluida' as const };
+    assert.equal(conferirSituacao(estado, consulta(), 1000 + MARGEM_CONFERENCIA_MS - 1).fase, 'incerto');
+    assert.equal(conferirSituacao(estado, consulta(), 1000 + MARGEM_CONFERENCIA_MS + 1).fase, 'recusado');
   });
 });
 
