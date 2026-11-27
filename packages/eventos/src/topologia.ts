@@ -17,3 +17,5 @@ export const BINDING_PACIENTE = 'paciente.atualizado';
 export const BINDING_AUTORIZACAO = 'paciente.autorizacao_alterada';
 export const FILA_AGENDAMENTO = 'agendamento.pacientes';
 export const FILA_AGENDAMENTO_ERROS = 'agendamento.pacientes.erros';
+/** US-30: o Agendamento aplica as confirmações recebidas pela Notificação (mesma fila dos pacientes). */
+export const BINDING_CONFIRMACAO = 'consulta.confirmada';

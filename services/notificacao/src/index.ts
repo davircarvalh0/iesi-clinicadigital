@@ -1,6 +1,7 @@
 import { criarApp } from './app';
 import { criarCanalEnvio } from './canais';
 import { config } from './config';
+import { iniciarPublicador } from './confirmacoes/publicador';
 import { iniciarConsumidor } from './consumidor/consumidor';
 import { prisma } from './db';
 import { iniciarRotinaEnvio } from './envio/rotina-envio';
@@ -20,6 +21,7 @@ async function main() {
   const canalRabbit = await abrirCanalConsumo(conexao);
   await iniciarConsumidor(canalRabbit, config.consumidorMaxTentativas);
   iniciarFilaErros(conexao);
+  const pararPublicador = await iniciarPublicador(conexao);
 
   const pararRotina = iniciarRotinaEnvio(criarCanalEnvio(), config.rotinaEnvioIntervaloMs, config.envioMaxTentativas, {
     reservaExpiraMs: config.envioReservaExpiraMs,
@@ -32,6 +34,7 @@ async function main() {
   const encerrar = async () => {
     encerrando = true;
     pararRotina();
+    pararPublicador();
     servidor.close();
     await conexao.close().catch(() => {});
     await prisma.$disconnect();

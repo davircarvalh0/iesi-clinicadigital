@@ -44,6 +44,9 @@ export async function estadoConsumo() {
 }
 
 async function processar(msg: ConsumeMessage): Promise<void> {
+  // US-30: `consulta.confirmada` é publicado por esta própria Notificação e chega aqui pelo binding consulta.*.
+  // A atividade já foi registrada ao receber a resposta; não há o que fazer.
+  if (msg.fields.routingKey === 'consulta.confirmada') { canal.ack(msg); return; }
   const leitura = lerEvento(msg);
   if (!leitura.ok) {
     await recusar(msg, leitura.motivo);

@@ -12,6 +12,7 @@ enum PerfilUsuario {
   administrador
   recepcionista
   profissional
+  paciente
 }
 
 model Usuario {
@@ -21,7 +22,40 @@ model Usuario {
   senhaHash String @map("senha_hash")
   perfil PerfilUsuario
   profissionalId String? @map("profissional_id")
+  /// US-27: conta do portal ligada a um paciente do cadastro mestre (uma conta por paciente).
+  pacienteId String? @unique @map("paciente_id")
+  paciente Paciente? @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
+  ativo Boolean @default(true)
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  sessoes Sessao[]
+  redefinicoes RedefinicaoSenha[]
   @@map("usuarios")
+}
+
+/// US-25: cada login abre uma sessão. Logout, troca de senha, mudança de perfil e desativação a encerram.
+model Sessao {
+  id String @id @default(uuid())
+  usuarioId String @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  criadaEm DateTime @default(now()) @map("criada_em") @db.Timestamptz(3)
+  expiraEm DateTime @map("expira_em") @db.Timestamptz(3)
+  encerradaEm DateTime? @map("encerrada_em") @db.Timestamptz(3)
+  @@index([usuarioId])
+  @@map("sessoes")
+}
+
+/// US-25: pedido de recuperação de senha. Só o hash do código é guardado; o código vale uma vez.
+model RedefinicaoSenha {
+  id String @id @default(uuid())
+  usuarioId String @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  codigoHash String @unique @map("codigo_hash")
+  criadaEm DateTime @default(now()) @map("criada_em") @db.Timestamptz(3)
+  expiraEm DateTime @map("expira_em") @db.Timestamptz(3)
+  usadaEm DateTime? @map("usada_em") @db.Timestamptz(3)
+  @@index([usuarioId])
+  @@map("redefinicoes_senha")
 }
 
 model Paciente {
@@ -37,6 +71,7 @@ model Paciente {
   criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm  DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   autorizacoes  AutorizacaoContato[]
+  conta         Usuario?
 
   @@map("pacientes")
 }

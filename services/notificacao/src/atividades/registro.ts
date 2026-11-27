@@ -16,6 +16,8 @@ export type Acao =
   | 'lembrete.incerto'
   | 'lembrete.reenvio_solicitado'
   | 'lembrete.mantido_sem_reenvio'
+  | 'lembrete.confirmado'
+  | 'lembrete.resposta_ignorada'
   | 'envio.retomado'
   | 'autorizacao.atualizada'
   | 'envio.nova_tentativa'

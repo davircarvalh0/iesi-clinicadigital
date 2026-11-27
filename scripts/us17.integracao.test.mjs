@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt, randomUUID } from 'node:crypto';
 import { before, test } from 'node:test';
@@ -45,7 +45,7 @@ const inicioFuturo = () => new Date(Date.now() + 7 * 86400000).toISOString();
 
 const consultaValida = () => ({
   nome: 'Paciente Fictício US17', cpf: cpfFicticio(), telefone: '81900000017',
-  profissional: 'Profissional Fictício', especialidade: 'Teste', inicio: inicioFuturo(),
+  profissional: profissionalDeTeste(), especialidade: 'Teste', inicio: inicioFuturo(),
 });
 
 // Retrato do que o Agendamento persistiu: consultas e linhas da outbox.

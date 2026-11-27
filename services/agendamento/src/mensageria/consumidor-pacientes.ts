@@ -1,8 +1,10 @@
 import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import {
-  BINDING_PACIENTE, EXCHANGE_ERROS, EXCHANGE_EVENTOS,
-  FILA_AGENDAMENTO, FILA_AGENDAMENTO_ERROS, validarPacienteAtualizado,
+  BINDING_CONFIRMACAO, BINDING_PACIENTE, EXCHANGE_ERROS, EXCHANGE_EVENTOS,
+  FILA_AGENDAMENTO, FILA_AGENDAMENTO_ERROS, validarConsultaConfirmada, validarPacienteAtualizado,
+  type ConsultaConfirmada, type PacienteAtualizado, type Validacao,
 } from '@clinica/eventos';
+import { aplicarConfirmacaoWhatsapp } from '../consultas/confirmacao-whatsapp';
 import { aplicarPacienteAtualizado } from '../consultas/vinculo-paciente';
 
 const MAX_TENTATIVAS = 3;
@@ -16,6 +18,7 @@ export async function iniciarConsumidorPacientes(canal: ConfirmChannel): Promise
   });
   await canal.assertQueue(FILA_AGENDAMENTO_ERROS, { durable: true });
   await canal.bindQueue(FILA_AGENDAMENTO, EXCHANGE_EVENTOS, BINDING_PACIENTE);
+  await canal.bindQueue(FILA_AGENDAMENTO, EXCHANGE_EVENTOS, BINDING_CONFIRMACAO);
   await canal.bindQueue(FILA_AGENDAMENTO_ERROS, EXCHANGE_ERROS, '');
   await canal.prefetch(1);
   await canal.consume(FILA_AGENDAMENTO, (msg) => {
@@ -31,8 +34,13 @@ function lerEvento(msg: ConsumeMessage): unknown {
   }
 }
 
+/** A fila recebe `paciente.atualizado` (US-03) e `consulta.confirmada` (US-30). */
+function validar(valor: unknown): Validacao<PacienteAtualizado | ConsultaConfirmada> {
+  return (valor as { tipo?: unknown } | null)?.tipo === 'consulta.confirmada' ? validarConsultaConfirmada(valor) : validarPacienteAtualizado(valor);
+}
+
 async function consumir(canal: ConfirmChannel, msg: ConsumeMessage): Promise<void> {
-  const leitura = validarPacienteAtualizado(lerEvento(msg));
+  const leitura = validar(lerEvento(msg));
   if (!leitura.ok) {
     await recusar(canal, msg, leitura.motivo);
     return;
@@ -40,7 +48,8 @@ async function consumir(canal: ConfirmChannel, msg: ConsumeMessage): Promise<voi
   const evento = leitura.evento;
 
   try {
-    await aplicarPacienteAtualizado(evento);
+    if (evento.tipo === 'consulta.confirmada') await aplicarConfirmacaoWhatsapp(evento);
+    else await aplicarPacienteAtualizado(evento);
     canal.ack(msg);
   } catch (erro) {
     const tentativa = Number(msg.properties.headers?.['x-tentativas'] ?? 0) + 1;

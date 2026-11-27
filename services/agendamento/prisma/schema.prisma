@@ -8,17 +8,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// US-28: agendada → confirmada → concluida | falta; cancelada a qualquer momento antes de encerrar.
 enum StatusConsulta {
   agendada
   cancelada
+  confirmada
+  concluida
+  falta
 }
 
 model Profissional {
   id String @id @default(uuid())
   nome String @unique
   especialidade String
+  /// US-26: profissional inativo não recebe novas consultas; as existentes continuam.
+  ativo Boolean @default(true)
+  duracaoConsultaMinutos Int @default(30) @map("duracao_consulta_minutos")
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   consultas Consulta[]
+  disponibilidades Disponibilidade[]
   @@map("profissionais")
+}
+
+/// US-26: disponibilidade semanal, no horário da clínica (America/Recife), em minutos desde 00:00.
+model Disponibilidade {
+  id String @id @default(uuid())
+  profissionalId String @map("profissional_id")
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  /// 0 = domingo … 6 = sábado
+  diaSemana Int @map("dia_semana")
+  inicioMinutos Int @map("inicio_minutos")
+  fimMinutos Int @map("fim_minutos")
+  @@index([profissionalId])
+  @@map("disponibilidades")
 }
 
 model Consulta {
@@ -36,13 +59,33 @@ model Consulta {
   vinculoProfissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Restrict)
   especialidade    String
   inicio           DateTime       @db.Timestamptz(3)
+  /// US-26: duração copiada do profissional ao agendar; usada na prevenção de conflitos.
+  duracaoMinutos   Int            @default(30) @map("duracao_minutos")
   status           StatusConsulta @default(agendada)
+  /// US-28/US-30: quando e por onde a presença foi confirmada (recepcao, portal, whatsapp).
+  confirmadaEm     DateTime?      @map("confirmada_em") @db.Timestamptz(3)
+  confirmadaPor    String?        @map("confirmada_por")
+  /// US-28: quando foi registrada como concluída ou falta.
+  encerradaEm      DateTime?      @map("encerrada_em") @db.Timestamptz(3)
   criadoEm         DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   @@index([inicio])
   @@index([profissionalId])
+  @@index([profissionalId, inicio])
+  @@index([idPaciente])
   @@map("consultas")
+}
+
+/// US-27: cópia local do contato do paciente (de `paciente.atualizado`), usada nas solicitações
+/// feitas pelo portal. O cadastro mestre continua no serviço de Cadastro.
+model PacienteContato {
+  id        String @id
+  cpf       String @unique
+  nome      String
+  telefone  String
+  revisao   Int
+  @@map("pacientes_contato")
 }
 
 model EventoProcessado {

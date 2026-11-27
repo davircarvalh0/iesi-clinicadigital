@@ -1,6 +1,6 @@
 import express, { type ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
-import { verificarAcesso } from '@clinica/eventos';
+import { exigirSessao } from './sessao';
 import { rotasUsuarios } from './usuarios';
 import { atualizar, buscarPorCpf, detalhar, ErroCadastro, historicoAutorizacoes, listar, registrarAutorizacao } from './servico';
 
@@ -10,12 +10,7 @@ export function criarApp() {
   app.use(express.json({ limit: '16kb' }));
   app.get('/saude', (_req, res) => res.json({ servico: 'cadastro', status: 'ok' }));
   app.use('/usuarios', rotasUsuarios);
-  app.use('/pacientes', (req, res, next) => {
-    const usuario = verificarAcesso(req.headers.authorization);
-    if (!usuario) { res.status(401).json({ erro: 'Login obrigatório.' }); return; }
-    if (usuario.perfil === 'profissional') { res.status(403).json({ erro: 'Acesso restrito.' }); return; }
-    next();
-  });
+  app.use('/pacientes', exigirSessao(['administrador', 'recepcionista']));
   app.get('/pacientes', async (req, res) => { res.json(await listar(req.query)); });
   app.post('/pacientes/busca-cpf', async (req, res) => {
     res.json({ paciente: await buscarPorCpf(req.body) });

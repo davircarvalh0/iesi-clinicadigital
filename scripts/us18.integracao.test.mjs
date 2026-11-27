@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -54,7 +54,7 @@ async function agendar(inicio) {
     method: 'POST',
     body: {
       cpf: `000${String(randomInt(100_000_000)).padStart(8, '0')}`, nome: 'Paciente Fictício US18', telefone: '81900000180',
-      profissional: 'Profissional Fictício', especialidade: 'Teste', inicio,
+      profissional: profissionalDeTeste(), especialidade: 'Teste', inicio,
     },
   });
   assert.equal(r.status, 201);

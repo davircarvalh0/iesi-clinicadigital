@@ -57,6 +57,8 @@ model Lembrete {
   sequenciaAplicada   Int?           @map("sequencia_aplicada")
   /// US-15: quando a recepção decidiu manter um envio incerto sem reenvio. Volta a nulo a cada novo resultado.
   incertoResolvidoEm  DateTime?      @map("incerto_resolvido_em") @db.Timestamptz(3)
+  /// US-30: consulta cancelada depois do envio; respostas do paciente não a confirmam.
+  consultaCanceladaEm DateTime?      @map("consulta_cancelada_em") @db.Timestamptz(3)
   tentativasEnvio     TentativaEnvio[]
   resolucoes          ResolucaoEnvio[]
   criadoEm            DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
@@ -189,4 +191,35 @@ model ResolucaoEnvio {
 
   @@index([idLembrete, registradaEm])
   @@map("resolucoes_envio")
+}
+
+/// US-30: outbox da Notificação. O evento nasce na mesma transação que registra a resposta do paciente.
+model EventoSaida {
+  idEvento    String    @id @map("id_evento")
+  tipo        String
+  envelope    Json
+  criadoEm    DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  publicadoEm DateTime? @map("publicado_em") @db.Timestamptz(3)
+
+  @@index([publicadoEm, criadoEm])
+  @@map("eventos_saida")
+}
+
+enum ResultadoResposta {
+  confirmada
+  nao_reconhecida
+  sem_consulta
+}
+
+/// US-30: respostas do paciente ao lembrete no WhatsApp. Idempotente pelo id da mensagem do provedor.
+/// Não guarda telefone nem o texto da mensagem: só o desfecho e a consulta afetada.
+model RespostaWhatsapp {
+  idMensagem String            @id @map("id_mensagem")
+  idConsulta String?           @map("id_consulta")
+  resultado  ResultadoResposta
+  recebidaEm DateTime          @map("recebida_em") @db.Timestamptz(3)
+  criadaEm   DateTime          @default(now()) @map("criada_em") @db.Timestamptz(3)
+
+  @@index([idConsulta])
+  @@map("respostas_whatsapp")
 }

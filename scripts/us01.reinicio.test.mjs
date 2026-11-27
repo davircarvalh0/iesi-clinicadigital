@@ -1,4 +1,4 @@
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -50,7 +50,7 @@ test('US-01: Cadastro retoma a fila e não repete efeitos após reinício', { ti
         payload: {
           id_consulta: id, paciente: { cpf, nome: 'Paciente Fictício US01', telefone: '81900000001' },
           inicio: new Date(Date.now() + 7 * 86400000).toISOString(),
-          profissional: 'Profissional Fictício', especialidade: 'Teste',
+          profissional: profissionalDeTeste(), especialidade: 'Teste',
         },
       };
     };

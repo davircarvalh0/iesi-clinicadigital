@@ -1,7 +1,7 @@
 // US-15 pelo gateway: modo de envio explícito e decisão sobre envio incerto protegida pelas regras.
 // O resultado incerto em si é provocado nos testes de banco (services/notificacao/test/us15.test.ts),
 // porque exige um provedor que não responde. Uso: Compose ativo com CANAL_ENVIO=log.
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { before, test } from 'node:test';
@@ -46,7 +46,7 @@ test('US-15 CA3: só um envio sem confirmação aceita decisão; entrada inváli
   const cpf = `000${String(randomInt(100_000_000)).padStart(8, '0')}`;
   const criada = await api('agendamento/consultas', {
     method: 'POST',
-    body: { nome: 'Paciente Exemplo Quinze', cpf, telefone: '81900000150', profissional: 'Dra. Exemplo', especialidade: 'Teste', inicio: new Date(Date.now() + 20 * 86_400_000).toISOString() },
+    body: { nome: 'Paciente Exemplo Quinze', cpf, telefone: '81900000150', profissional: profissionalDeTeste('Dra. Exemplo'), especialidade: 'Teste', inicio: new Date(Date.now() + 20 * 86_400_000).toISOString() },
   });
   assert.equal(criada.status, 201);
   const id = criada.dados.id;

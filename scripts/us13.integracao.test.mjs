@@ -1,6 +1,6 @@
 // US-13 ponta a ponta: consulta próxima com autorização → envio simulado → trilha com a tentativa e as atividades.
 // Uso: Compose ativo com CANAL_ENVIO=log e antecedência padrão; TEST_BASE_URL aponta o gateway.
-import { fetch } from './http-autenticado.mjs';
+import { fetch, profissionalDeTeste } from './http-autenticado.mjs';
 import assert from 'node:assert/strict';
 import { randomInt } from 'node:crypto';
 import { before, test } from 'node:test';
@@ -38,7 +38,7 @@ test('US-13: a trilha mostra a programação, a tentativa simulada e o resultado
   // Consulta futura distante: cria o paciente no Cadastro sem disparar envio.
   const primeira = await api('agendamento/consultas', {
     method: 'POST',
-    body: { nome: NOME, cpf: CPF, telefone: TELEFONE, profissional: 'Dra. Exemplo', especialidade: 'Teste', inicio: new Date(Date.now() + 30 * 86_400_000).toISOString() },
+    body: { nome: NOME, cpf: CPF, telefone: TELEFONE, profissional: profissionalDeTeste('Dra. Exemplo'), especialidade: 'Teste', inicio: new Date(Date.now() + 30 * 86_400_000).toISOString() },
   });
   assert.equal(primeira.status, 201);
   const { dados: busca } = await aguardar(() => api('cadastro/pacientes/busca-cpf', { method: 'POST', body: { cpf: CPF } }),
@@ -53,7 +53,7 @@ test('US-13: a trilha mostra a programação, a tentativa simulada e o resultado
   // Consulta em 1 hora: com antecedência de 24 h, o lembrete sai no próximo ciclo.
   const proxima = await api('agendamento/consultas', {
     method: 'POST',
-    body: { nome: NOME, cpf: CPF, telefone: TELEFONE, profissional: 'Dra. Exemplo', especialidade: 'Teste', inicio: new Date(Date.now() + 3_600_000).toISOString() },
+    body: { nome: NOME, cpf: CPF, telefone: TELEFONE, profissional: profissionalDeTeste('Dra. Exemplo'), especialidade: 'Teste', inicio: new Date(Date.now() + 3_600_000).toISOString() },
   });
   assert.equal(proxima.status, 201);
   const id = proxima.dados.id;

@@ -52,6 +52,9 @@ const ENV_BASE = {
   COMPOSE_PROJECT_NAME: PROJETO,
   CANAL_ENVIO: 'log',
   OPERACAO_HABILITADA: 'true',
+  // US-30: liga o webhook do WhatsApp com segredos de teste (nenhuma mensagem real sai: CANAL_ENVIO=log).
+  WHATSAPP_APP_SECRET: randomBytes(16).toString('hex'),
+  WHATSAPP_VERIFY_TOKEN: randomBytes(16).toString('hex'),
   LEMBRETE_ANTECEDENCIA_MINUTOS: '1440',
   TEST_BASE_URL: `http://localhost:${PORTAS.RECEPCAO_PORTA}`,
   TEST_RABBITMQ_URL: `amqp://clinica:clinica@localhost:${PORTAS.RABBITMQ_PORTA}`,

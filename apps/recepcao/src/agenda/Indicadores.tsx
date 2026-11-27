@@ -19,7 +19,7 @@ function valorDe(valor: number, situacao: Situacao): number | string {
 
 export function Indicadores({ consultas, lembretes, situacaoConsultas, situacaoLembretes, totalPacientes, cadastroIndisponivel }: Props) {
   const hoje = chaveDia(new Date());
-  const consultasHoje = consultas.filter((c) => c.status === 'agendada' && chaveDia(new Date(c.inicio)) === hoje).length;
+  const consultasHoje = consultas.filter((c) => (c.status === 'agendada' || c.status === 'confirmada') && chaveDia(new Date(c.inicio)) === hoje).length;
   const programados = lembretes.filter((l) => l.status === 'programado').length;
 
   return (

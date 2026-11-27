@@ -1,6 +1,7 @@
 // Formato das respostas HTTP dos serviços (não confundir com os eventos do barramento).
 
-export type StatusConsulta = 'agendada' | 'cancelada';
+/** US-28: confirmada, concluida e falta vêm do acompanhamento da consulta. */
+export type StatusConsulta = 'agendada' | 'cancelada' | 'confirmada' | 'concluida' | 'falta';
 export type StatusLembrete =
   | 'programado' | 'enviando' | 'enviado' | 'simulado' | 'aceito_provedor' | 'falhou' | 'cancelado' | 'bloqueado' | 'incerto';
 
