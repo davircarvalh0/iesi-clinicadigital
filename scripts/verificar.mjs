@@ -99,7 +99,7 @@ async function etapa(grupo, nome, cmd, args, opcoes = {}) {
   const registro = { grupo, nome, comando: sanitizar(`${cmd.replace('.cmd', '')} ${args.join(' ')}`), ok, testes, segundos: (Date.now() - t0) / 1000 };
   etapas.push(registro);
   console.log(`${ok ? 'OK' : 'FALHOU'} (${registro.segundos.toFixed(1)} s${testes ? `; ${testes.pass}/${testes.total} aprovados, ${testes.skipped} pulados` : ''})`);
-  if (!ok) console.log(sanitizar(saida.split('\n').slice(-40).join('\n')));
+  if (!ok) console.log(sanitizar(saida));
   return ok;
 }
 

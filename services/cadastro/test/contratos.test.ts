@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ehPacienteAtualizado } from '@clinica/eventos';
 import { esquemaAutorizacao, esquemaBusca, esquemaBuscaCpf, esquemaContato, esquemaPacienteAgendado } from '../src/validacao';
-import { mascaraCpf, mascaraTelefone } from '../../../apps/recepcao/src/formatacao';
+import { mascararCpfDigitado as mascaraCpf, mascararTelefoneDigitado as mascaraTelefone } from '../../../apps/recepcao/src/dominio/documentos';
 
 test('contato normaliza máscara, permite remover e-mail e protege identidade/revisão', () => {
   assert.deepEqual(esquemaContato.parse({ telefone: '(81) 90000-0001', email: '', revisao: 1 }), {
