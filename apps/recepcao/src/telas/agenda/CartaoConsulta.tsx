@@ -8,7 +8,7 @@ import { desconhecido, velho, type Frescor } from '../../dominio/frescor';
 import { antecedenciaDeDemonstracao, pendenciaDe, SITUACAO, TEXTO_PENDENCIA } from '../../dominio/lembretes';
 import { Confirmacao, Selo } from '../../ui/componentes';
 import type { EstadoCancelamento } from './cancelamentos';
-import type { EstadoSituacao, NovaSituacao } from './situacao';
+import { consultaAtiva, type EstadoSituacao, type NovaSituacao } from './situacao';
 
 interface Props {
   consulta: Consulta;
@@ -24,8 +24,7 @@ interface Props {
 export function CartaoConsulta({ consulta: c, lembrete, frescorLembretes, cancelamento, situacao, aoRemarcar, aoCancelar, aoMudarSituacao }: Props) {
   const [confirmando, setConfirmando] = useState<'cancelar' | 'concluida' | 'falta' | null>(null);
   const cancelada = c.status === 'cancelada';
-  const encerrada = c.status === 'concluida' || c.status === 'falta';
-  const ativa = !cancelada && !encerrada;
+  const ativa = consultaAtiva(c);
   const jaComecou = new Date(c.inicio) <= new Date();
   const semLeitura = desconhecido(frescorLembretes);
   const pendencia = semLeitura ? null : pendenciaDe(c, lembrete);

@@ -7,10 +7,7 @@ import { agendamento } from '../../api/servicos';
 import type { Consulta } from '../../api/tipos';
 import { chaveDia, dataHora, diaPorExtenso, hoje, hora, nomeDoDia, saudacao } from '../../dominio/datas';
 import { Atualizacao, Aviso, CabecalhoTela, Carregando, Confirmacao, Selo, Vazio } from '../../ui/componentes';
-import { useMudancasSituacao, type EstadoSituacao, type NovaSituacao } from '../agenda/situacao';
-
-/** Ainda vai acontecer: não cancelada, não já encerrada (concluida/falta). */
-const ativa = (c: Consulta) => c.status === 'agendada' || c.status === 'confirmada';
+import { consultaAtiva, useMudancasSituacao, type EstadoSituacao, type NovaSituacao } from '../agenda/situacao';
 
 /** Agenda do profissional: só as consultas dele (o Agendamento filtra pelo perfil). Registra presença/falta. */
 export function TelaMinhaAgenda() {
@@ -47,8 +44,8 @@ export function TelaMinhaAgenda() {
       {consultas.data && (
         <>
           <p className="resumo-lista">
-            {hojeLista.filter(ativa).length
-              ? `Hoje você tem ${hojeLista.filter(ativa).length} consulta(s).`
+            {hojeLista.filter(consultaAtiva).length
+              ? `Hoje você tem ${hojeLista.filter(consultaAtiva).length} consulta(s).`
               : 'Nenhuma consulta hoje.'}
             {' '}
             <label className="alternador"><input type="checkbox" checked={mostrarCanceladas} onChange={(e) => setMostrarCanceladas(e.target.checked)} /> Mostrar canceladas</label>
@@ -92,6 +89,7 @@ function ConsultaProfissional({ consulta: c, situacao, aoMudarSituacao }: {
             {c.status === 'concluida' && <Selo tom="ok">Concluída</Selo>}
             {c.status === 'falta' && <Selo tom="perigo">Faltou</Selo>}
           </div>
+          {situacao?.fase === 'confirmado' && <p className="consulta__resultado consulta__resultado--ok" role="status">Situação atualizada.</p>}
           {situacao && !travado && situacao.fase === 'recusado' && <p className="consulta__resultado consulta__resultado--erro" role="alert">{situacao.mensagem}</p>}
           {situacao?.fase === 'incerto' && (
             <p className="consulta__resultado consulta__resultado--alerta" role="alert">
@@ -99,7 +97,7 @@ function ConsultaProfissional({ consulta: c, situacao, aoMudarSituacao }: {
             </p>
           )}
         </div>
-        {ativa(c) && jaComecou && (
+        {consultaAtiva(c) && jaComecou && (
           <div className="consulta__acoes">
             <button type="button" className="botao botao--quieto" onClick={() => setConfirmando('concluida')} disabled={travado}>
               <Check size={16} aria-hidden="true" /> Concluída

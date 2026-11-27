@@ -6,6 +6,11 @@ import { MARGEM_CONFERENCIA_MS } from './cancelamentos';
 
 export type NovaSituacao = 'confirmada' | 'concluida' | 'falta';
 
+/** Ainda vai acontecer: nem cancelada, nem já encerrada (concluida/falta). */
+export function consultaAtiva(c: Consulta): boolean {
+  return c.status === 'agendada' || c.status === 'confirmada';
+}
+
 /**
  * Mudança de situação pedida nesta tela (US-28): mesma lógica de incerteza do cancelamento
  * (cancelamentos.ts) — sem resposta do serviço, só a próxima leitura da agenda diz se aconteceu.
@@ -20,8 +25,10 @@ export type EstadoSituacao =
 export function conferirSituacao(estado: EstadoSituacao, consulta: Consulta | undefined, lidoEm: number): EstadoSituacao {
   if (estado.fase !== 'incerto' || lidoEm <= estado.em || !consulta) return estado;
   if (consulta.status === estado.alvo) return { fase: 'confirmado', em: estado.em };
+  // Não necessariamente "nada mudou": outra pessoa pode ter aplicado uma situação diferente da pedida
+  // enquanto a resposta estava perdida. A mensagem não afirma qual é a situação atual, só pede para conferir.
   return lidoEm - estado.em > MARGEM_CONFERENCIA_MS
-    ? { fase: 'recusado', mensagem: 'A agenda continua mostrando a situação anterior: a alteração não aconteceu. Você pode tentar de novo.' }
+    ? { fase: 'recusado', mensagem: 'A agenda não confirma essa mudança. Confira a situação atual antes de tentar de novo.' }
     : estado;
 }
 
