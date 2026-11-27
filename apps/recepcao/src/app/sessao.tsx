@@ -42,11 +42,15 @@ export function ProvedorSessao({ children }: { children: ReactNode }) {
   });
 
   const sair = useCallback((aviso?: string) => {
+    // Encerra a sessão no Cadastro antes de descartar o token local (senão a chamada não leva
+    // o Authorization). Melhor esforço: sem rede ou com o token já expirado, o logout local
+    // acontece de qualquer forma — a pessoa não pode ficar presa por causa disso.
+    if (estado.token) void acesso.sair().catch(() => {});
     configurarSessao(null);
     try { sessionStorage.removeItem(CHAVE); } catch { /* sem armazenamento */ }
     cliente.clear();
     setEstado({ usuario: null, token: null, aviso: aviso ?? null });
-  }, [cliente]);
+  }, [cliente, estado.token]);
 
   useEffect(() => {
     configurarSessao(estado.token, () => sair('Sua sessão expirou. Entre de novo para continuar.'));
