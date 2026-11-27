@@ -5,7 +5,7 @@ import { agendamento, cadastro } from '../../api/servicos';
 import type { Perfil } from '../../api/tipos';
 import { Aviso, CabecalhoTela, Campo, Carregando, Selo } from '../../ui/componentes';
 
-const NOME_PERFIL: Record<Perfil, string> = { administrador: 'Administração', recepcionista: 'Recepção', profissional: 'Profissional' };
+const NOME_PERFIL: Record<Perfil, string> = { administrador: 'Administração', recepcionista: 'Recepção', profissional: 'Profissional', paciente: 'Paciente' };
 
 export function TelaEquipe() {
   return (

@@ -56,7 +56,7 @@ export function TelaAgenda() {
 
   const semana = Array.from({ length: 7 }, (_, i) => somarDias(inicioDaSemana(dia), i));
   const doDia = porDia.get(dia) ?? [];
-  const agendadas = doDia.filter((c) => c.status === 'agendada');
+  const agendadas = doDia.filter((c) => c.status !== 'cancelada');
   const lembretesConhecidos = !desconhecido(lembretes.frescor);
   const pendencias = lembretesConhecidos ? doDia.filter((c) => pendenciaDe(c, lembretePorConsulta.get(c.id))).length : 0;
 
@@ -72,7 +72,7 @@ export function TelaAgenda() {
         <button type="button" className="botao botao--quieto botao--icone" onClick={() => escolherDia(somarDias(dia, -7))} aria-label="Semana anterior"><ChevronLeft size={20} /></button>
         <ol className="semana__dias">
           {semana.map((chave) => {
-            const total = (porDia.get(chave) ?? []).filter((c) => c.status === 'agendada').length;
+            const total = (porDia.get(chave) ?? []).filter((c) => c.status !== 'cancelada').length;
             const passado = chave < hoje();
             return (
               <li key={chave}>
