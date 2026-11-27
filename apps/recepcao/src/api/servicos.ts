@@ -10,6 +10,7 @@ const id = encodeURIComponent;
 export const acesso = {
   entrar: (email: string, senha: string) =>
     chamar<{ usuario: Usuario; token: string }>('/api/cadastro/usuarios/login', { metodo: 'POST', corpo: { email, senha } }),
+  sair: () => chamar<unknown>('/api/cadastro/usuarios/logout', { metodo: 'POST' }),
   recuperarSenha: (email: string) =>
     chamar<{ mensagem: string }>('/api/cadastro/usuarios/recuperar-senha', { metodo: 'POST', corpo: { email } }),
   redefinirSenha: (codigo: string, novaSenha: string) =>
