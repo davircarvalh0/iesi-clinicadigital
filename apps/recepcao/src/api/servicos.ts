@@ -1,8 +1,9 @@
 import { chamar } from './cliente';
 import type {
-  Atividade, Autorizacao, Canal, ConfiguracaoEnvio, Consulta, DadosNovaConsulta, Disponibilidade, EdicaoPaciente,
-  ErroNaFila, EstadoConsumo, EventoPublicado, IntervaloDisponibilidade, Lembrete, OrigemAutorizacao, PacienteDetalhado,
-  PaginaLembretes, PaginaPacientes, Perfil, Profissional, Reprocessamento, Trilha, Usuario, UsuarioListado,
+  Atividade, Autorizacao, Canal, ConfiguracaoEnvio, Consulta, ConsultaPaciente, DadosNovaConsulta, Disponibilidade,
+  EdicaoPaciente, ErroNaFila, EstadoConsumo, EventoPublicado, HorariosDisponiveis, IntervaloDisponibilidade, Lembrete,
+  OrigemAutorizacao, PacienteDetalhado, PaginaLembretes, PaginaPacientes, Perfil, Profissional, ProfissionalPortal,
+  Reprocessamento, Trilha, Usuario, UsuarioListado,
 } from './tipos';
 
 const id = encodeURIComponent;
@@ -54,7 +55,7 @@ export const cadastro = {
   registrarAutorizacao: (idPaciente: string, dados: { canal: Canal; situacao: 'autorizado' | 'revogado'; origem: OrigemAutorizacao }) =>
     chamar<{ registro: Autorizacao; autorizacoes: Autorizacao[] }>(`/api/cadastro/pacientes/${id(idPaciente)}/autorizacoes`, { metodo: 'POST', corpo: dados, prazoMs: 10_000 }),
   usuarios: (sinal?: AbortSignal) => chamar<UsuarioListado[]>('/api/cadastro/usuarios', { sinal }),
-  cadastrarUsuario: (dados: { nome: string; email: string; senha: string; perfil: Perfil; profissionalId?: string | null }) =>
+  cadastrarUsuario: (dados: { nome: string; email: string; senha: string; perfil: Perfil; profissionalId?: string | null; pacienteId?: string | null }) =>
     chamar<UsuarioListado>('/api/cadastro/usuarios', { metodo: 'POST', corpo: dados }),
   atualizarUsuario: (idUsuario: string, dados: { nome?: string; email?: string; perfil?: Exclude<Perfil, 'paciente'>; profissionalId?: string | null }) =>
     chamar<UsuarioListado>(`/api/cadastro/usuarios/${id(idUsuario)}`, { metodo: 'PATCH', corpo: dados }),
@@ -64,6 +65,18 @@ export const cadastro = {
     chamar<UsuarioListado>('/api/cadastro/usuarios/minha-conta', { metodo: 'PATCH', corpo: dados }),
   trocarSenha: (senhaAtual: string, novaSenha: string) =>
     chamar<unknown>('/api/cadastro/usuarios/minha-conta/senha', { metodo: 'PATCH', corpo: { senhaAtual, novaSenha } }),
+};
+
+/** US-27: rotas que só o perfil paciente usa — a própria consulta, nunca a de outro paciente. */
+export const portal = {
+  profissionais: (sinal?: AbortSignal) => chamar<ProfissionalPortal[]>('/api/agendamento/profissionais', { sinal }),
+  horariosDisponiveis: (profissionalId: string, data: string, sinal?: AbortSignal) =>
+    chamar<HorariosDisponiveis>(`/api/agendamento/consultas/horarios-disponiveis?${new URLSearchParams({ profissionalId, data })}`, { sinal }),
+  minhasConsultas: (sinal?: AbortSignal) => chamar<ConsultaPaciente[]>('/api/agendamento/pacientes/minha-conta/consultas', { sinal }),
+  solicitar: (dados: { profissionalId: string; inicio: string }) =>
+    chamar<ConsultaPaciente>('/api/agendamento/consultas/solicitar', { metodo: 'POST', corpo: dados, prazoMs: 10_000 }),
+  confirmar: (idConsulta: string) =>
+    chamar<ConsultaPaciente>(`/api/agendamento/consultas/${id(idConsulta)}/confirmar`, { metodo: 'PATCH', prazoMs: 10_000 }),
 };
 
 export interface FiltroPainel {

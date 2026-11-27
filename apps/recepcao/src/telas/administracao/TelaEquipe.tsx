@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Clock, Pencil } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { CheckCircle2, Clock, Pencil, Search } from 'lucide-react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useSessao, useUsuario } from '../../app/sessao';
 import { motivo, statusDe } from '../../api/cliente';
 import { agendamento, cadastro } from '../../api/servicos';
-import type { Perfil, Profissional, UsuarioListado } from '../../api/tipos';
+import type { PacienteDetalhado, Perfil, Profissional, UsuarioListado } from '../../api/tipos';
+import { cpfCompleto, mascararCpfDigitado, soDigitos, telefone } from '../../dominio/documentos';
 import { Aviso, CabecalhoTela, Campo, Carregando, Confirmacao, Selo, Sobreposicao } from '../../ui/componentes';
 import { GavetaDisponibilidade } from './GavetaDisponibilidade';
 
@@ -112,6 +113,11 @@ function Profissionais() {
   );
 }
 
+type PacienteEncontrado = Pick<PacienteDetalhado, 'id' | 'cpf' | 'nome' | 'telefone'>;
+type BuscaPaciente =
+  | { estado: 'inicial' | 'buscando' | 'nao-encontrado' | 'indisponivel' }
+  | { estado: 'encontrado'; paciente: PacienteEncontrado };
+
 function DialogoEditarProfissional({ profissional, aoFechar, aoSalvo }: { profissional: Profissional; aoFechar: () => void; aoSalvo: () => void }) {
   const [nome, setNome] = useState(profissional.nome);
   const [especialidade, setEspecialidade] = useState(profissional.especialidade);
@@ -152,27 +158,66 @@ function Usuarios() {
   const { atualizarUsuario } = useSessao();
   const lista = useQuery({ queryKey: ['usuarios'], queryFn: ({ signal }) => cadastro.usuarios(signal) });
   const profissionais = useQuery({ queryKey: ['profissionais'], queryFn: ({ signal }) => agendamento.profissionais(signal) });
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', perfil: 'recepcionista' as Perfil, profissionalId: '' });
+  const [form, setForm] = useState({ nome: '', email: '', senha: '', perfil: 'recepcionista' as Perfil, profissionalId: '', cpf: '' });
+  const [buscaPaciente, setBuscaPaciente] = useState<BuscaPaciente>({ estado: 'inicial' });
   const [aviso, setAviso] = useState<{ tom: 'ok' | 'perigo'; texto: string } | null>(null);
   const [editando, setEditando] = useState<UsuarioListado | null>(null);
   const [desativando, setDesativando] = useState<UsuarioListado | null>(null);
   const [erroDesativar, setErroDesativar] = useState<string | null>(null);
+  const pedidoCpf = useRef<AbortController | null>(null);
   const mudar = (dados: Partial<typeof form>) => setForm((f) => ({ ...f, ...dados }));
   const nomeProfissional = (id: string | null) => profissionais.data?.find((p) => p.id === id)?.nome;
+
+  const pacienteEncontrado = buscaPaciente.estado === 'encontrado' ? buscaPaciente.paciente : null;
+
+  const mudarPerfil = (perfil: Perfil) => {
+    pedidoCpf.current?.abort();
+    setBuscaPaciente({ estado: 'inicial' });
+    mudar({ perfil, profissionalId: '', cpf: '', nome: perfil === 'paciente' ? '' : form.nome });
+  };
+
+  const buscarPaciente = async (valor: string) => {
+    if (!cpfCompleto(valor)) return;
+    pedidoCpf.current?.abort();
+    const controle = new AbortController();
+    pedidoCpf.current = controle;
+    setBuscaPaciente({ estado: 'buscando' });
+    try {
+      const { paciente } = await cadastro.buscarCpf(valor, controle.signal);
+      if (controle.signal.aborted) return;
+      if (paciente) { setBuscaPaciente({ estado: 'encontrado', paciente }); mudar({ nome: paciente.nome }); }
+      else setBuscaPaciente({ estado: 'nao-encontrado' });
+    } catch {
+      if (!controle.signal.aborted) setBuscaPaciente({ estado: 'indisponivel' });
+    }
+  };
+
+  const mudarCpf = (valor: string) => {
+    const mascarado = mascararCpfDigitado(valor);
+    if (soDigitos(mascarado) === soDigitos(form.cpf)) { mudar({ cpf: mascarado }); return; }
+    pedidoCpf.current?.abort();
+    setBuscaPaciente({ estado: 'inicial' });
+    mudar({ cpf: mascarado, nome: '' });
+    if (cpfCompleto(mascarado)) void buscarPaciente(mascarado);
+  };
+
+  const prontoParaCriar = form.perfil !== 'paciente' || !!pacienteEncontrado;
 
   const cadastrar = useMutation({
     mutationFn: () => cadastro.cadastrarUsuario({
       nome: form.nome.trim(), email: form.email.trim(), senha: form.senha, perfil: form.perfil,
       profissionalId: form.perfil === 'profissional' ? form.profissionalId : null,
+      pacienteId: form.perfil === 'paciente' ? pacienteEncontrado?.id : null,
     }),
     onSuccess: (u) => {
       setAviso({ tom: 'ok', texto: `Acesso criado para ${u.nome}. Entregue a senha inicial pessoalmente.` });
-      setForm({ nome: '', email: '', senha: '', perfil: 'recepcionista', profissionalId: '' });
+      setForm({ nome: '', email: '', senha: '', perfil: 'recepcionista', profissionalId: '', cpf: '' });
+      setBuscaPaciente({ estado: 'inicial' });
       void cliente.invalidateQueries({ queryKey: ['usuarios'] });
     },
-    onError: (e) => setAviso({ tom: 'perigo', texto: statusDe(e) === 409 ? 'Já existe um acesso com esse e-mail.' : `Não foi possível criar o acesso: ${motivo(e)}.` }),
+    onError: (e) => setAviso({ tom: 'perigo', texto: statusDe(e) === 409 ? `${motivo(e)}.` : `Não foi possível criar o acesso: ${motivo(e)}.` }),
   });
-  const enviar = (e: FormEvent) => { e.preventDefault(); setAviso(null); cadastrar.mutate(); };
+  const enviar = (e: FormEvent) => { e.preventDefault(); if (!prontoParaCriar || cadastrar.isPending) return; setAviso(null); cadastrar.mutate(); };
 
   const definirStatus = useMutation({
     mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => cadastro.definirStatusUsuario(id, ativo),
@@ -214,20 +259,50 @@ function Usuarios() {
       </ul>
       <form className="formulario formulario--separado" onSubmit={enviar}>
         <h3 className="formulario__titulo">Criar acesso</h3>
+        <Campo rotulo="Perfil">
+          <select value={form.perfil} onChange={(e) => mudarPerfil(e.target.value as Perfil)}>
+            <option value="recepcionista">Recepção</option>
+            <option value="profissional">Profissional</option>
+            <option value="administrador">Administração</option>
+            <option value="paciente">Paciente</option>
+          </select>
+        </Campo>
+
+        {form.perfil === 'paciente' && (
+          <div className="busca-cpf">
+            <Campo rotulo="CPF do paciente" dica="O paciente precisa já estar cadastrado em Pacientes.">
+              <input inputMode="numeric" placeholder="000.000.000-00" value={form.cpf} autoComplete="off"
+                onChange={(e) => mudarCpf(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void buscarPaciente(form.cpf); } }} />
+            </Campo>
+            <button type="button" className="botao botao--secundario" disabled={!cpfCompleto(form.cpf) || buscaPaciente.estado === 'buscando' || !!pacienteEncontrado}
+              onClick={() => void buscarPaciente(form.cpf)}>
+              <Search size={16} aria-hidden="true" /> {buscaPaciente.estado === 'indisponivel' ? 'Buscar de novo' : 'Buscar'}
+            </button>
+          </div>
+        )}
+        {form.perfil === 'paciente' && (
+          <div role="status" className="busca-cpf__resultado">
+            {buscaPaciente.estado === 'buscando' && <p className="nota">Procurando no Cadastro…</p>}
+            {pacienteEncontrado && (
+              <div className="paciente-encontrado">
+                <CheckCircle2 size={20} aria-hidden="true" />
+                <div>
+                  <p className="paciente-encontrado__nome">{pacienteEncontrado.nome}</p>
+                  <p className="paciente-encontrado__fone">{telefone(pacienteEncontrado.telefone)}</p>
+                </div>
+              </div>
+            )}
+            {buscaPaciente.estado === 'nao-encontrado' && <p className="nota">Esse CPF ainda não tem cadastro. Cadastre o paciente primeiro em "Pacientes".</p>}
+            {buscaPaciente.estado === 'indisponivel' && <Aviso tom="alerta">O Cadastro não respondeu. Tente buscar de novo.</Aviso>}
+          </div>
+        )}
+
         <div className="formulario__linha">
           <Campo rotulo="Nome"><input required minLength={3} maxLength={80} value={form.nome} onChange={(e) => mudar({ nome: e.target.value })} /></Campo>
           <Campo rotulo="E-mail"><input type="email" required value={form.email} onChange={(e) => mudar({ email: e.target.value })} autoComplete="off" /></Campo>
         </div>
-        <div className="formulario__linha">
-          <Campo rotulo="Senha inicial" dica="Pelo menos 12 caracteres."><input type="password" required minLength={12} maxLength={128} value={form.senha} onChange={(e) => mudar({ senha: e.target.value })} autoComplete="new-password" /></Campo>
-          <Campo rotulo="Perfil">
-            <select value={form.perfil} onChange={(e) => mudar({ perfil: e.target.value as Perfil, profissionalId: '' })}>
-              <option value="recepcionista">Recepção</option>
-              <option value="profissional">Profissional</option>
-              <option value="administrador">Administração</option>
-            </select>
-          </Campo>
-        </div>
+        <Campo rotulo="Senha inicial" dica="Pelo menos 12 caracteres."><input type="password" required minLength={12} maxLength={128} value={form.senha} onChange={(e) => mudar({ senha: e.target.value })} autoComplete="new-password" /></Campo>
         {form.perfil === 'profissional' && (
           <Campo rotulo="Agenda de qual profissional" dica="A pessoa verá só as consultas deste profissional.">
             <select required value={form.profissionalId} onChange={(e) => mudar({ profissionalId: e.target.value })}>
@@ -237,7 +312,7 @@ function Usuarios() {
           </Campo>
         )}
         {aviso && <Aviso tom={aviso.tom}>{aviso.texto}</Aviso>}
-        <div className="formulario__acoes"><button className="botao botao--primario" disabled={cadastrar.isPending}>{cadastrar.isPending ? 'Criando…' : 'Criar acesso'}</button></div>
+        <div className="formulario__acoes"><button className="botao botao--primario" disabled={!prontoParaCriar || cadastrar.isPending}>{cadastrar.isPending ? 'Criando…' : 'Criar acesso'}</button></div>
       </form>
 
       {editando && (

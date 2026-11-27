@@ -36,6 +36,38 @@ export interface Disponibilidade {
   intervalos: IntervaloDisponibilidade[];
 }
 
+// ---------- Portal do paciente ----------
+
+/** O que GET /profissionais devolve para o perfil paciente: sem `ativo` (só os ativos aparecem). */
+export interface ProfissionalPortal {
+  id: string;
+  nome: string;
+  especialidade: string;
+  duracaoConsultaMinutos: number;
+}
+
+export interface HorariosDisponiveis {
+  profissionalId: string;
+  profissional: string;
+  especialidade: string;
+  duracaoConsultaMinutos: number;
+  /** ISO 8601 com fuso, um por horário livre. */
+  horarios: string[];
+}
+
+/** Consulta como o paciente a vê: sem CPF nem dados de outro paciente. */
+export interface ConsultaPaciente {
+  id: string;
+  profissional: string;
+  profissionalId: string;
+  especialidade: string;
+  inicio: string;
+  duracaoMinutos: number;
+  status: StatusConsulta;
+  confirmadaEm: string | null;
+  podeConfirmar: boolean;
+}
+
 // ---------- Agendamento ----------
 
 export type StatusConsulta = 'agendada' | 'confirmada' | 'concluida' | 'falta' | 'cancelada';
