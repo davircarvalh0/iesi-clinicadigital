@@ -10,6 +10,10 @@ const id = encodeURIComponent;
 export const acesso = {
   entrar: (email: string, senha: string) =>
     chamar<{ usuario: Usuario; token: string }>('/api/cadastro/usuarios/login', { metodo: 'POST', corpo: { email, senha } }),
+  recuperarSenha: (email: string) =>
+    chamar<{ mensagem: string }>('/api/cadastro/usuarios/recuperar-senha', { metodo: 'POST', corpo: { email } }),
+  redefinirSenha: (codigo: string, novaSenha: string) =>
+    chamar<unknown>('/api/cadastro/usuarios/redefinir-senha', { metodo: 'POST', corpo: { codigo, novaSenha } }),
 };
 
 export const agendamento = {
@@ -41,6 +45,14 @@ export const cadastro = {
   usuarios: (sinal?: AbortSignal) => chamar<UsuarioListado[]>('/api/cadastro/usuarios', { sinal }),
   cadastrarUsuario: (dados: { nome: string; email: string; senha: string; perfil: Perfil; profissionalId?: string | null }) =>
     chamar<UsuarioListado>('/api/cadastro/usuarios', { metodo: 'POST', corpo: dados }),
+  atualizarUsuario: (idUsuario: string, dados: { nome?: string; email?: string; perfil?: Exclude<Perfil, 'paciente'>; profissionalId?: string | null }) =>
+    chamar<UsuarioListado>(`/api/cadastro/usuarios/${id(idUsuario)}`, { metodo: 'PATCH', corpo: dados }),
+  definirStatusUsuario: (idUsuario: string, ativo: boolean) =>
+    chamar<UsuarioListado>(`/api/cadastro/usuarios/${id(idUsuario)}/status`, { metodo: 'PATCH', corpo: { ativo } }),
+  atualizarMinhaConta: (dados: { nome?: string; email?: string }) =>
+    chamar<UsuarioListado>('/api/cadastro/usuarios/minha-conta', { metodo: 'PATCH', corpo: dados }),
+  trocarSenha: (senhaAtual: string, novaSenha: string) =>
+    chamar<unknown>('/api/cadastro/usuarios/minha-conta/senha', { metodo: 'PATCH', corpo: { senhaAtual, novaSenha } }),
 };
 
 export interface FiltroPainel {
