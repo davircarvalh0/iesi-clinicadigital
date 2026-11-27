@@ -7,7 +7,7 @@ import { useSessao, useUsuario } from '../app/sessao';
 import { saude, type NomeServico } from '../api/servicos';
 import { PainelIntegracao } from './PainelIntegracao';
 
-const NOME_PERFIL = { administrador: 'Administração', recepcionista: 'Recepção', profissional: 'Profissional' } as const;
+const NOME_PERFIL = { administrador: 'Administração', recepcionista: 'Recepção', profissional: 'Profissional', paciente: 'Paciente' } as const;
 
 function lerPreferencia(): boolean {
   try { return localStorage.getItem('clinica.integracao') === 'aberta'; } catch { return false; }

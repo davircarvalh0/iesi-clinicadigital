@@ -89,7 +89,8 @@ describe('classificação de falhas', () => {
   });
   it('motivo legível para prazo esgotado', () => {
     assert.equal(motivo(new DOMException('x', 'TimeoutError')), 'o serviço não respondeu a tempo');
-    assert.equal(motivo(new ErroApi(400, 'CPF inválido.')), 'CPF inválido.');
+    // Sem o ponto final: quem concatena (`${motivo(e)}.`) decide a pontuação, senão duplica.
+    assert.equal(motivo(new ErroApi(400, 'CPF inválido.')), 'CPF inválido');
   });
 });
 

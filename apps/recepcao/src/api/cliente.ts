@@ -65,11 +65,16 @@ export function tipoDaFalha(erro: unknown): TipoFalha {
   return 'incerta';
 }
 
-/** Motivo curto e legível, sem jargão do navegador. */
+/**
+ * Motivo curto e legível, sem jargão do navegador.
+ * Nunca termina em ponto: quem concatena (`` `...: ${motivo(e)}.` ``) decide a pontuação final.
+ * As mensagens do back-end (`erro.message`) já vêm com ponto, por isso é removido aqui.
+ */
 export function motivo(erro: unknown): string {
-  if (erro instanceof ErroApi) return erro.message;
-  if (erro instanceof DOMException && (erro.name === 'TimeoutError' || erro.name === 'AbortError')) return 'o serviço não respondeu a tempo';
-  return 'sem conexão com o serviço';
+  const texto = erro instanceof ErroApi ? erro.message
+    : erro instanceof DOMException && (erro.name === 'TimeoutError' || erro.name === 'AbortError') ? 'o serviço não respondeu a tempo'
+    : 'sem conexão com o serviço';
+  return texto.replace(/\.$/, '');
 }
 
 export const statusDe = (erro: unknown): number | null => (erro instanceof ErroApi ? erro.status : null);

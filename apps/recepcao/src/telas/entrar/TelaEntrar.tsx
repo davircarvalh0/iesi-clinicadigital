@@ -22,7 +22,7 @@ export function TelaEntrar() {
       await entrar(email.trim(), senha);
     } catch (falha) {
       const status = statusDe(falha);
-      setErro(status === 401 || status === 400 ? 'E-mail ou senha não conferem.' : status === 429 ? motivo(falha) : `Não foi possível entrar: ${motivo(falha)}.`);
+      setErro(status === 401 || status === 400 ? 'E-mail ou senha não conferem.' : status === 429 ? `${motivo(falha)}.` : `Não foi possível entrar: ${motivo(falha)}.`);
       setSenha('');
     } finally {
       setEntrando(false);

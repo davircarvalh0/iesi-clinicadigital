@@ -1,6 +1,6 @@
 // Formatos das respostas HTTP dos serviços, conforme docs/contratos.md.
 
-export type Perfil = 'administrador' | 'recepcionista' | 'profissional';
+export type Perfil = 'administrador' | 'recepcionista' | 'profissional' | 'paciente';
 
 export interface Usuario {
   id: string;
@@ -21,7 +21,7 @@ export interface Profissional {
 
 // ---------- Agendamento ----------
 
-export type StatusConsulta = 'agendada' | 'cancelada';
+export type StatusConsulta = 'agendada' | 'confirmada' | 'concluida' | 'falta' | 'cancelada';
 
 export interface Consulta {
   id: string;
