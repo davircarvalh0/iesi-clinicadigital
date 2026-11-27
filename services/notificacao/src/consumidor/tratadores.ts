@@ -13,9 +13,9 @@ export async function tratarEvento(tx: Prisma.TransactionClient, evento: EventoR
     return;
   }
   if (evento.tipo === 'paciente.atualizado') {
-    const { cpf, nome, telefone, revisao } = evento.payload;
-    await tx.contatoPaciente.createMany({ data: { cpf, nome, telefone, revisao }, skipDuplicates: true });
-    await tx.contatoPaciente.updateMany({ where: { cpf, revisao: { lt: revisao } }, data: { nome, telefone, revisao } });
+    const { cpf, nome, telefone, email, revisao } = evento.payload;
+    await tx.contatoPaciente.createMany({ data: { cpf, nome, telefone, email, revisao }, skipDuplicates: true });
+    await tx.contatoPaciente.updateMany({ where: { cpf, revisao: { lt: revisao } }, data: { nome, telefone, email, revisao } });
     const contato = await tx.contatoPaciente.findUniqueOrThrow({ where: { cpf } });
     await tx.lembrete.updateMany({
       where: { pacienteCpf: cpf, status: { in: ['programado', 'falhou', 'bloqueado'] } },

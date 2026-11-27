@@ -1,4 +1,5 @@
 import { lerDestinosPermitidos } from './canais/configuracao-envio';
+import { lerDestinosEmail } from './canais/canal-email';
 import { lerConfiguracaoLembretes } from './lembretes/configuracao';
 
 function obrigatoria(nome: string): string {
@@ -7,15 +8,21 @@ function obrigatoria(nome: string): string {
   return valor;
 }
 
-/** Canal de contato dos lembretes: o envio real e o simulado usam WhatsApp. */
-export const CANAL_LEMBRETE = 'whatsapp' as const;
+/** Canal cuja autorização é exigida, inclusive durante a simulação. */
+export const CANAL_LEMBRETE = ['email', 'email_log'].includes(process.env.CANAL_ENVIO ?? '') ? 'email' as const : 'whatsapp' as const;
 
 export const config = {
   porta: Number(process.env.PORTA ?? 3002),
   rabbitUrl: obrigatoria('RABBITMQ_URL'),
   ...lerConfiguracaoLembretes(process.env),
   consumidorMaxTentativas: Number(process.env.CONSUMIDOR_MAX_TENTATIVAS ?? 3),
-  canalEnvio: process.env.CANAL_ENVIO === 'whatsapp' ? 'whatsapp' : 'log',
+  envioAutomaticoHabilitado: process.env.ENVIO_AUTOMATICO_HABILITADO !== 'false',
+  canalEnvio: process.env.CANAL_ENVIO === 'email_log' ? 'email_log' : process.env.CANAL_ENVIO === 'email' ? 'email' : process.env.CANAL_ENVIO === 'whatsapp' ? 'whatsapp' : 'log',
+  email: {
+    token: process.env.RESEND_API_KEY ?? '',
+    remetente: process.env.LEMBRETE_EMAIL_REMETENTE ?? '',
+    destinosPermitidos: lerDestinosEmail(process.env.LEMBRETE_EMAIL_DESTINOS_PERMITIDOS),
+  },
   whatsapp: {
     token: process.env.WHATSAPP_TOKEN ?? '',
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? '',
