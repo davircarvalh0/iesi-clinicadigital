@@ -53,12 +53,14 @@ export async function aplicarAutorizacao(
     });
   for (const lembrete of afetados) {
     if (situacao === 'revogado') {
-      await tx.lembrete.update({
-        where: { id: lembrete.id },
+      const { count } = await tx.lembrete.updateMany({
+        where: { id: lembrete.id, status: 'programado' },
         data: { status: 'bloqueado', motivoFalha: `autorização de contato por ${NOME_CANAL[canal]} revogada` },
       });
+      if (!count) continue;
     } else {
-      await tx.lembrete.update({ where: { id: lembrete.id }, data: { status: 'programado', motivoFalha: null, tentativas: 0 } });
+      const { count } = await tx.lembrete.updateMany({ where: { id: lembrete.id, status: 'bloqueado' }, data: { status: 'programado', motivoFalha: null, tentativas: 0, canalEnvio: null, modoEnvio: null } });
+      if (!count) continue;
     }
     await registrarAtividade({
       acao: situacao === 'revogado' ? 'lembrete.bloqueado' : 'lembrete.liberado',

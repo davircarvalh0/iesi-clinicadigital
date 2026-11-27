@@ -8,7 +8,7 @@ import { descreverEnvio } from './configuracao-envio';
 export function criarCanalEnvio({ canalEnvio, whatsapp, email }: Pick<typeof config, 'canalEnvio' | 'whatsapp'> & Partial<Pick<typeof config, 'email'>> = config): CanalEnvio {
   const descricao = descreverEnvio({ canalEnvio, whatsapp, email });
   console.log(`[canais] modo de envio ${descricao.modo}: ${descricao.motivo}`);
-  if (descricao.modo === 'simulado') return new CanalLog(canalEnvio === 'email' ? 'email' : 'whatsapp');
+  if (descricao.modo === 'simulado') return new CanalLog(canalEnvio === 'email' || canalEnvio === 'email_log' ? 'email' : 'whatsapp');
   return canalEnvio === 'email' ? new CanalEmail(email!) : new CanalWhatsApp(whatsapp);
 }
 
