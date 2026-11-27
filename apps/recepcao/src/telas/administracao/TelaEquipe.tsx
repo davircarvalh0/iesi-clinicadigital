@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { useUsuario } from '../../app/sessao';
+import { useSessao, useUsuario } from '../../app/sessao';
 import { motivo, statusDe } from '../../api/cliente';
 import { agendamento, cadastro } from '../../api/servicos';
 import type { Perfil, Profissional, UsuarioListado } from '../../api/tipos';
@@ -59,12 +59,14 @@ function Profissionais() {
 function Usuarios() {
   const cliente = useQueryClient();
   const eu = useUsuario();
+  const { atualizarUsuario } = useSessao();
   const lista = useQuery({ queryKey: ['usuarios'], queryFn: ({ signal }) => cadastro.usuarios(signal) });
   const profissionais = useQuery({ queryKey: ['profissionais'], queryFn: ({ signal }) => agendamento.profissionais(signal) });
   const [form, setForm] = useState({ nome: '', email: '', senha: '', perfil: 'recepcionista' as Perfil, profissionalId: '' });
   const [aviso, setAviso] = useState<{ tom: 'ok' | 'perigo'; texto: string } | null>(null);
   const [editando, setEditando] = useState<UsuarioListado | null>(null);
   const [desativando, setDesativando] = useState<UsuarioListado | null>(null);
+  const [erroDesativar, setErroDesativar] = useState<string | null>(null);
   const mudar = (dados: Partial<typeof form>) => setForm((f) => ({ ...f, ...dados }));
   const nomeProfissional = (id: string | null) => profissionais.data?.find((p) => p.id === id)?.nome;
 
@@ -84,8 +86,12 @@ function Usuarios() {
 
   const definirStatus = useMutation({
     mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => cadastro.definirStatusUsuario(id, ativo),
-    onSuccess: () => { setDesativando(null); void cliente.invalidateQueries({ queryKey: ['usuarios'] }); },
-    onError: (e) => setAviso({ tom: 'perigo', texto: `Não foi possível alterar: ${motivo(e)}.` }),
+    onSuccess: () => { setDesativando(null); setErroDesativar(null); void cliente.invalidateQueries({ queryKey: ['usuarios'] }); },
+    onError: (e) => {
+      const texto = `Não foi possível alterar: ${motivo(e)}.`;
+      // Ativar não tem diálogo (ação direta); desativar mostra o erro dentro do diálogo aberto.
+      if (desativando) setErroDesativar(texto); else setAviso({ tom: 'perigo', texto });
+    },
   });
 
   return (
@@ -106,7 +112,8 @@ function Usuarios() {
               <button type="button" className="botao botao--quieto botao--icone" onClick={() => setEditando(u)} aria-label={`Editar ${u.nome}`}>
                 <Pencil size={15} aria-hidden="true" />
               </button>
-              <button type="button" className="botao botao--quieto" disabled={definirStatus.isPending || (u.ativo && u.id === eu.id)}
+              <button type="button" className="botao botao--quieto"
+                disabled={(definirStatus.isPending && definirStatus.variables?.id === u.id) || (u.ativo && u.id === eu.id)}
                 title={u.ativo && u.id === eu.id ? 'Você não pode desativar a própria conta.' : undefined}
                 onClick={() => (u.ativo ? setDesativando(u) : definirStatus.mutate({ id: u.id, ativo: true }))}>
                 {u.ativo ? 'Desativar' : 'Ativar'}
@@ -148,7 +155,12 @@ function Usuarios() {
           usuario={editando}
           profissionais={profissionais.data}
           aoFechar={() => setEditando(null)}
-          aoSalvo={() => { setEditando(null); void cliente.invalidateQueries({ queryKey: ['usuarios'] }); }}
+          aoSalvo={(u) => {
+            setEditando(null);
+            // A própria conta: reflete o nome novo na sessão, senão a barra lateral fica com o nome antigo.
+            if (u.id === eu.id) atualizarUsuario({ id: u.id, nome: u.nome, perfil: u.perfil, profissionalId: u.profissionalId });
+            void cliente.invalidateQueries({ queryKey: ['usuarios'] });
+          }}
         />
       )}
       {desativando && (
@@ -157,7 +169,8 @@ function Usuarios() {
           confirmar="Desativar"
           perigo
           ocupado={definirStatus.isPending}
-          aoFechar={() => setDesativando(null)}
+          erro={erroDesativar}
+          aoFechar={() => { setDesativando(null); setErroDesativar(null); }}
           aoConfirmar={() => definirStatus.mutate({ id: desativando.id, ativo: false })}
         >
           <p>A pessoa deixa de conseguir entrar no sistema. O acesso pode ser reativado depois.</p>
@@ -168,7 +181,7 @@ function Usuarios() {
 }
 
 function DialogoEditarUsuario({ usuario, profissionais, aoFechar, aoSalvo }: {
-  usuario: UsuarioListado; profissionais: Profissional[] | undefined; aoFechar: () => void; aoSalvo: () => void;
+  usuario: UsuarioListado; profissionais: Profissional[] | undefined; aoFechar: () => void; aoSalvo: (usuario: UsuarioListado) => void;
 }) {
   const ehPaciente = usuario.perfil === 'paciente';
   const [nome, setNome] = useState(usuario.nome);
@@ -182,7 +195,9 @@ function DialogoEditarUsuario({ usuario, profissionais, aoFechar, aoSalvo }: {
       ? { nome: nome.trim(), email: email.trim() }
       : { nome: nome.trim(), email: email.trim(), perfil, profissionalId: perfil === 'profissional' ? profissionalId : null }),
     onSuccess: aoSalvo,
-    onError: (e) => setErro(statusDe(e) === 409 ? 'Já existe um acesso com esse e-mail.' : `Não foi possível salvar: ${motivo(e)}.`),
+    // 409 aqui pode ser e-mail duplicado OU a recusa de tirar o último administrador ativo — a mensagem
+    // do Cadastro já distingue os dois casos, então é só repassar em vez de supor qual foi.
+    onError: (e) => setErro(statusDe(e) === 409 ? `${motivo(e)}.` : `Não foi possível salvar: ${motivo(e)}.`),
   });
 
   const enviar = (e: FormEvent) => { e.preventDefault(); if (salvar.isPending) return; setErro(null); salvar.mutate(); };
