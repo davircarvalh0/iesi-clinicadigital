@@ -82,6 +82,13 @@ test('US-30: webhook público só aceita mensagem assinada pela Meta', async () 
 
   const mensagemOriginal = `wamid.${randomUUID()}`;
   registrarAceiteWhatsappFixture(consulta.id, mensagemOriginal);
+  const aceite = await api(`notificacao/lembretes?consulta=${consulta.id}`, { token: admin });
+  assert.equal(aceite.status, 200);
+  assert.equal(aceite.dados[0].canalEnvio, 'whatsapp');
+  assert.equal(aceite.dados[0].modoEnvio, 'real');
+  const trilha = await api(`notificacao/lembretes/${consulta.id}/trilha`, { token: admin });
+  assert.equal(trilha.status, 200);
+  assert.ok(trilha.dados.tentativas.some(t => t.idExterno === mensagemOriginal && t.canal === 'whatsapp' && t.modo === 'real'));
   const resposta = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{
     id: `wamid.${randomUUID()}`, from: `55${telefone}`, timestamp: String(Math.floor(Date.now() / 1000)),
     type: 'text', text: { body: 'confirmo' }, context: { id: mensagemOriginal },

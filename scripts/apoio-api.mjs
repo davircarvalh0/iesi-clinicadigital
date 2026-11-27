@@ -19,7 +19,7 @@ export function ajustarInicioHistorico(id, inicio) {
 export function registrarAceiteWhatsappFixture(idConsulta, idMensagem) {
   assert.match(idConsulta, /^[0-9a-f-]{36}$/i);
   assert.match(idMensagem, /^wamid\.[0-9a-f-]{36}$/i);
-  const sql = `BEGIN; UPDATE lembretes SET status = 'aceito_provedor', id_externo = '${idMensagem}' WHERE id_consulta = '${idConsulta}' AND status = 'simulado'; UPDATE tentativas_envio SET resultado = 'aceito_provedor', id_externo = '${idMensagem}' WHERE id_consulta = '${idConsulta}' AND resultado = 'simulado'; COMMIT;`;
+  const sql = `BEGIN; UPDATE lembretes SET status = 'aceito_provedor', canal_envio = 'whatsapp', modo_envio = 'real', id_externo = '${idMensagem}' WHERE id_consulta = '${idConsulta}' AND status = 'simulado' AND canal_envio = 'log'; UPDATE tentativas_envio SET resultado = 'aceito_provedor', canal = 'whatsapp', modo = 'real', id_externo = '${idMensagem}' WHERE id_consulta = '${idConsulta}' AND resultado = 'simulado' AND canal = 'log'; COMMIT;`;
   execFileSync('docker', ['compose', '-p', projeto, 'exec', '-T', 'db-notificacao', 'psql', '-U', 'notificacao', '-d', 'notificacao', '-v', 'ON_ERROR_STOP=1', '-c', sql], { encoding: 'utf8' });
 }
 
