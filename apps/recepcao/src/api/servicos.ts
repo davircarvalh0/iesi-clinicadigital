@@ -19,6 +19,8 @@ export const agendamento = {
     chamar<Consulta>(`/api/agendamento/consultas/${id(idConsulta)}`, { metodo: 'PATCH', corpo: { inicio }, prazoMs: 10_000 }),
   cancelar: (idConsulta: string) =>
     chamar<Consulta>(`/api/agendamento/consultas/${id(idConsulta)}`, { metodo: 'DELETE', prazoMs: 10_000 }),
+  mudarSituacao: (idConsulta: string, status: 'confirmada' | 'concluida' | 'falta') =>
+    chamar<Consulta>(`/api/agendamento/consultas/${id(idConsulta)}/status`, { metodo: 'PATCH', corpo: { status }, prazoMs: 10_000 }),
   profissionais: (sinal?: AbortSignal) => chamar<Profissional[]>('/api/agendamento/profissionais', { sinal }),
   cadastrarProfissional: (dados: { nome: string; especialidade: string }) =>
     chamar<Profissional>('/api/agendamento/profissionais', { metodo: 'POST', corpo: dados }),
